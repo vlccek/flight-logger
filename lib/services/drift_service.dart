@@ -31,48 +31,132 @@ class DriftService {
   // 3. The database instance is created once with the service.
   final AppDatabase _db = AppDatabase();
 
-  Future<void> diagnoseAirportLookup(String depIcao, String arrIcao) async {
-    print('--- DIAGNOSING AIRPORT LOOKUP ---');
-    print('Searching for Departure: "$depIcao" (Length: ${depIcao.length})');
-    print('Searching for Arrival: "$arrIcao" (Length: ${arrIcao.length})');
+  Future<int> countFlights() async {
+    final countExpression = _db.flights.id.count();
+    final query = _db.selectOnly(_db.flights)..addColumns([countExpression]);
+    final result = await query
+        .map((row) => row.read(countExpression))
+        .getSingle();
+    return result ?? 0;
+  }
 
-    // 1. Direct database query (case-sensitive by default in Dart)
-    final depFromDb = await (_db.select(
+  /// Seeds the database with a few sample flights for testing purposes.
+  /// This function assumes that the airports (e.g., LKPR, EGLL) already exist
+  /// in the 'airports' table.
+  Future<void> seedFlightsWithTestData() async {
+    print('Seeding database with sample flights and calculating routes...');
+
+    // 1. Instantiate the services we'll need.
+    final routeCalculator = RouteCalculationService();
+    final geodesy = Geodesy();
+
+    // 2. Fetch the airports we need from the database to get their IDs and coordinates.
+    final prague = await (_db.select(
       _db.airports,
-    )..where((a) => a.icaoCode.equals(depIcao))).getSingleOrNull();
-    final arrFromDb = await (_db.select(
+    )..where((a) => a.icaoCode.equals('LKPR'))).getSingleOrNull();
+    final london = await (_db.select(
       _db.airports,
-    )..where((a) => a.icaoCode.equals(arrIcao))).getSingleOrNull();
+    )..where((a) => a.icaoCode.equals('EGLL'))).getSingleOrNull();
+    final sydney = await (_db.select(
+      _db.airports,
+    )..where((a) => a.icaoCode.equals('YSSY'))).getSingleOrNull();
 
-    print('Direct DB query for "$depIcao" found: ${depFromDb != null}');
-    print('Direct DB query for "$arrIcao" found: ${arrFromDb != null}');
+    if (prague == null || london == null || sydney == null) {
+      print(
+        'Could not seed flights: Required airports (LKPR, EGLL, LIRF) not found.',
+      );
+      return;
+    }
 
-    // 2. Check the keys in the pre-fetched map
-    final allAirports = await _db.select(_db.airports).get();
-    final airportMap = {
-      for (var airport in allAirports) airport.icaoCode: airport,
-    };
+    // 3. Create a helper function to avoid repeating the calculation logic.
+    // This makes the code cleaner and easier to read.
+    List<RoutePoint> _calculatePath(Airport departure, Airport arrival) {
+      final startLatLng = LatLng(departure.latitude, departure.longitude);
+      final endLatLng = LatLng(arrival.latitude, arrival.longitude);
+      final distance = geodesy
+          .distanceBetweenTwoGeoPoints(startLatLng, endLatLng)
+          .toInt();
+      final pointCount = routeCalculator.calculatePointsForRoute(distance);
+      final positions = routeCalculator.generateRoutePositions(
+        startLatLng,
+        endLatLng,
+        pointCount,
+      );
 
-    final depFromMap = airportMap[depIcao];
-    final arrFromMap = airportMap[arrIcao];
+      return positions
+          .where((p) => p[0] != null && p[1] != null)
+          .map(
+            (p) => RoutePoint(
+              latitude: p[1]!.toDouble(),
+              longitude: p[0]!.toDouble(),
+            ),
+          )
+          .toList();
+    }
 
-    print('Lookup in map for "$depIcao" found: ${depFromMap != null}');
-    print('Lookup in map for "$arrIcao" found: ${arrFromMap != null}');
+    // 4. Prepare a list of flights, now including the calculated routePath.
+    final List<FlightsCompanion> flightsToSeed = [
+      // Flight 1: Prague to London
+      FlightsCompanion.insert(
+        departureAirportId: prague.id,
+        arrivalAirportId: london.id,
+        flightDate: DateTime(2024, 5, 20, 10, 30),
+        flightDuration: const Duration(hours: 2, minutes: 5),
+        distance: geodesy
+            .distanceBetweenTwoGeoPoints(
+              LatLng(prague.latitude, prague.longitude),
+              LatLng(london.latitude, london.longitude),
+            )
+            .toInt(),
+        routePath: _calculatePath(
+          prague,
+          london,
+        ), // Calculate and assign the path
+      ),
+      // Flight 2: London to Rome
+      FlightsCompanion.insert(
+        departureAirportId: london.id,
+        arrivalAirportId: sydney.id,
+        flightDate: DateTime(2024, 5, 22, 14, 0),
+        flightDuration: const Duration(hours: 2, minutes: 40),
+        distance: geodesy
+            .distanceBetweenTwoGeoPoints(
+              LatLng(london.latitude, london.longitude),
+              LatLng(sydney.latitude, sydney.longitude),
+            )
+            .toInt(),
+        routePath: _calculatePath(
+          london,
+          sydney,
+        ), // Calculate and assign the path
+      ),
+      // Flight 3: Rome back to Prague
+      FlightsCompanion.insert(
+        departureAirportId: sydney.id,
+        arrivalAirportId: prague.id,
+        flightDate: DateTime(2024, 5, 25, 18, 15),
+        flightDuration: const Duration(hours: 1, minutes: 55),
+        distance: geodesy
+            .distanceBetweenTwoGeoPoints(
+              LatLng(sydney.latitude, sydney.longitude),
+              LatLng(prague.latitude, prague.longitude),
+            )
+            .toInt(),
+        routePath: _calculatePath(
+          sydney,
+          prague,
+        ), // Calculate and assign the path
+      ),
+    ];
 
-    // 3. List a few keys from the map to see their format
-    print('Sample keys from airport map: ${airportMap.keys.take(5).toList()}');
+    // 5. Use a batch operation to insert all flights at once.
+    await _db.batch((batch) {
+      batch.insertAll(_db.flights, flightsToSeed);
+    });
 
-    // 4. Check if the key exists in a case-insensitive way
-    final caseInsensitiveMatchDep = airportMap.keys.any(
-      (key) => key.toUpperCase() == depIcao.toUpperCase(),
+    print(
+      'Seeding complete. ${flightsToSeed.length} sample flights with routes inserted.',
     );
-    final caseInsensitiveMatchArr = airportMap.keys.any(
-      (key) => key.toUpperCase() == arrIcao.toUpperCase(),
-    );
-    print('Case-insensitive match for "$depIcao": $caseInsensitiveMatchDep');
-    print('Case-insensitive match for "$arrIcao": $caseInsensitiveMatchArr');
-
-    print('--- END OF DIAGNOSIS ---');
   }
 
   // --- PRIVATE HELPER FOR DOWNLOADING ---
@@ -292,9 +376,19 @@ class DriftService {
     final query = _db.selectOnly(_db.airports)..addColumns([countExpression]);
 
     // Execute the query and read the single resulting value.
-    final result = await query.map((row) => row.read(countExpression)).getSingle();
+    final result = await query
+        .map((row) => row.read(countExpression))
+        .getSingle();
 
     // The result will be non-null, but we provide a fallback for safety.
     return result ?? 0;
+  }
+
+  void deleteFlight(int id) {
+    // Create a delete query for the flights table.
+    final query = _db.delete(_db.flights)..where((f) => f.id.equals(id));
+
+    // Execute the delete operation.
+    query.go();
   }
 }

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre/maplibre.dart';
-import 'package:geodesy/geodesy.dart';
-import 'package:flutter/material.dart';
-import 'package:maplibre/maplibre.dart';
 import '../services/drift_service.dart'; // Import your services
 import '../widgets/app_drawer.dart'; // Your AppDrawer
 

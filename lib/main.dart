@@ -1,11 +1,10 @@
 // lib/main.dart
+import 'package:flight_logger/screens/list_flights.dart';
 import 'package:flutter/material.dart';
 import './screens/add_flight_screen.dart';
-import './screens/home_screen.dart';
 import './screens/flight_import_screen.dart';
 import 'screens/map_screen.dart';
 import 'services/drift_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +30,8 @@ Future<void> _runInitialSetup() async {
       // Call the import function from our service.
       await DriftService.instance.importAirportsFromUrl(airportDataUrl);
 
+      DriftService.instance.seedFlightsWithTestData();
+
       print('One-time import completed successfully.');
     } catch (e) {
       // If the import fails (e.g., no internet connection on first launch),
@@ -46,6 +47,8 @@ Future<void> _runInitialSetup() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -54,7 +57,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (ctx) => LayersPolylinePage(), // Vaše domovská obrazovka
         AddFlightScreen.routeName: (ctx) => AddFlightScreen(),
-        FlightImportScreen.routeName: (ctx) => FlightImportScreen(),
+        FlightListScreen.routeName: (ctx) => FlightListScreen(),
       },
     );
   }

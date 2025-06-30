@@ -4,7 +4,9 @@ import '../widgets/app_drawer.dart';
 
 class HomeScreen extends StatelessWidget {
 
-  static const routeName = '/home'; // Doporučuji pomlčky pro čitelnost
+  static const routeName = '/home';
+
+  const HomeScreen({super.key}); // Doporučuji pomlčky pro čitelnost
 
   @override
   Widget build(BuildContext context) {

@@ -2,14 +2,18 @@
 import 'package:flight_logger/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import '../screens/add_flight_screen.dart';
-import '../screens/map_screen.dart';
 import '../screens/flight_import_screen.dart';
+import '../screens/list_flights.dart';
 
 class AppDrawer extends StatelessWidget {
+  const AppDrawer({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return Drawer(
-      child: ListView(
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Routes')),
+      drawer: AppDrawer(),
+      body: ListView(
         padding: EdgeInsets.zero,
         children: <Widget>[
           AppBar(
@@ -38,7 +42,9 @@ class AppDrawer extends StatelessWidget {
             leading: Icon(Icons.list),
             title: Text('List Flights'),
             onTap: () {
-              Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
+              Navigator.of(
+                context,
+              ).pushReplacementNamed(FlightListScreen.routeName);
             },
           ),
           ListTile(
