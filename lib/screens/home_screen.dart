@@ -1,6 +1,6 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
-import '../widgets/app_drawer.dart'; // Importujte váš drawer
+import '../widgets/app_drawer.dart';
 
 class HomeScreen extends StatelessWidget {
 

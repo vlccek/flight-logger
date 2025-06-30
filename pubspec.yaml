@@ -39,6 +39,10 @@ dependencies:
   maplibre_gl: ^0.22.0
   geodesy: ^0.4.0
   drift: ^2.27.0
+  http: ^1.2.1
+  shared_preferences: ^2.2.3
+  file_picker: ^8.0.3
+  csv: ^6.0.0
 
   sqlite3_flutter_libs: ^0.5.22
 

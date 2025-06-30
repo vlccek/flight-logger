@@ -31,7 +31,7 @@ class RouteService {
         // 170 km
         id: '2',
         start: const LatLng(49.1951, 16.6068),
-        // Brno
+        // Brno 
         end: const LatLng(49.8209, 18.2625),
         // Ostrava
         date: DateTime.now().subtract(const Duration(days: 3)),
