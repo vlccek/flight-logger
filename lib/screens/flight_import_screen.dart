@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/drift_service.dart'; // Make sure the path is correct
 import '../widgets/app_drawer.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FlightImportScreen extends StatefulWidget {
   const FlightImportScreen({super.key});

@@ -210,7 +210,6 @@ class DriftService {
 
     for (final airportData in parsedJson.values) {
       if (airportData is Map<String, dynamic>) {
-
         // --- HERE IS THE FIX ---
         // Instead of casting directly to double, we first cast to num
         // and then convert to double. This works for both ints and doubles.
@@ -223,8 +222,10 @@ class DriftService {
             name: airportData['name'] as String,
             city: airportData['city'] as String,
             country: airportData['country'] as String,
-            latitude: lat, // Use the converted value
-            longitude: lon, // Use the converted value
+            latitude: lat,
+            // Use the converted value
+            longitude: lon,
+            // Use the converted value
             icaoCode: airportData['icao'] as String,
           ),
         );
@@ -397,5 +398,14 @@ class DriftService {
 
     // Execute the delete operation.
     query.go();
+  }
+
+  Future<void> saveFlight(FlightsCompanion flight) async {
+    _db.into(_db.flights).insert(flight, mode: InsertMode.insertOrReplace);
+  }
+
+  Future<List<Airport>> getAllAirports() async {
+    // Fetch all airports from the database.
+    return await _db.select(_db.airports).get();
   }
 }

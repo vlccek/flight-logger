@@ -106,14 +106,16 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
             onEvent: (event) async {
               switch (event) {
                 case MapEventStyleLoaded():
-                  final ByteData byteData = await rootBundle.load(
-                    'images/pin.png',
-                  );
-                  final Uint8List bytes = byteData.buffer.asUint8List();
+                  if (!_pinImageLoaded) {
+                    final ByteData byteData = await rootBundle.load(
+                      'images/pin.png',
+                    );
+                    final Uint8List bytes = byteData.buffer.asUint8List();
 
-                  // 2. Add the image data to the map's style with our unique ID.
-                  await event.style.addImage(pinImageId, bytes);
-                  _pinImageLoaded = true;
+                    // 2. Add the image data to the map's style with our unique ID.
+                    await event.style.addImage(pinImageId, bytes);
+                    _pinImageLoaded = true;
+                  }
                 default:
                   // ignore all other events
                   break;
