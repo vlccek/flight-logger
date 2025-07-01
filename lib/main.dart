@@ -11,6 +11,7 @@ void main() async {
 
   await _runInitialSetup();
 
+
   runApp(MyApp());
 }
 
@@ -57,6 +58,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (ctx) => LayersPolylinePage(), // Vaše domovská obrazovka
         AddFlightScreen.routeName: (ctx) => AddFlightScreen(),
+        FlightImportScreen.routeName: (ctx) => FlightImportScreen(),
         FlightListScreen.routeName: (ctx) => FlightListScreen(),
       },
     );

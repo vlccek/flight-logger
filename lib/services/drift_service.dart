@@ -41,7 +41,6 @@ class DriftService {
   }
 
   /// Seeds the database with a few sample flights for testing purposes.
-  /// This function assumes that the airports (e.g., LKPR, EGLL) already exist
   /// in the 'airports' table.
   Future<void> seedFlightsWithTestData() async {
     print('Seeding database with sample flights and calculating routes...');
@@ -211,13 +210,21 @@ class DriftService {
 
     for (final airportData in parsedJson.values) {
       if (airportData is Map<String, dynamic>) {
+
+        // --- HERE IS THE FIX ---
+        // Instead of casting directly to double, we first cast to num
+        // and then convert to double. This works for both ints and doubles.
+        final lat = (airportData['lat'] as num).toDouble();
+        final lon = (airportData['lon'] as num).toDouble();
+        // -----------------------
+
         airportCompanions.add(
           AirportsCompanion.insert(
             name: airportData['name'] as String,
             city: airportData['city'] as String,
             country: airportData['country'] as String,
-            latitude: airportData['lat'] as double,
-            longitude: airportData['lon'] as double,
+            latitude: lat, // Use the converted value
+            longitude: lon, // Use the converted value
             icaoCode: airportData['icao'] as String,
           ),
         );

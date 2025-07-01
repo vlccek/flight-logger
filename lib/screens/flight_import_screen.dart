@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/drift_service.dart'; // Make sure the path is correct
 import '../widgets/app_drawer.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FlightImportScreen extends StatefulWidget {
   const FlightImportScreen({super.key});
@@ -22,12 +24,15 @@ class _FlightImportScreenState extends State<FlightImportScreen> {
   Future<void> _importCsv() async {
     setState(() {
       _isLoading = true;
-      _statusMessage = 'Picking file...';
+      _statusMessage = 'Checking permissions...';
     });
 
     try {
-      // 1. Let the user pick a file.
+      setState(() => _statusMessage = 'Please select your CSV file...');
+
+      // 2. Let the user pick a file.
       final result = await FilePicker.platform.pickFiles(
+        withData: true,
         type: FileType.custom,
         allowedExtensions: ['csv'],
       );
@@ -38,17 +43,13 @@ class _FlightImportScreenState extends State<FlightImportScreen> {
       }
 
       setState(() => _statusMessage = 'File selected. Reading content...');
-
-      // 2. Read the file content as a string.
-      // We use utf8.decode to correctly handle special characters.
       final fileBytes = result.files.single.bytes!;
       final csvString = utf8.decode(fileBytes);
 
       setState(() => _statusMessage = 'Parsing and importing flights...');
-
-      // 3. Call the service to do the heavy lifting.
-      final driftService = DriftService.instance;
-      final importedCount = await driftService.importFlightsFromCsv(csvString);
+      final importedCount = await DriftService.instance.importFlightsFromCsv(
+        csvString,
+      );
 
       setState(() {
         _statusMessage =
@@ -59,7 +60,10 @@ class _FlightImportScreenState extends State<FlightImportScreen> {
         _statusMessage = 'An error occurred during import: $e';
       });
     } finally {
-      setState(() => _isLoading = false);
+      // Ensure isLoading is always set to false at the end.
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
