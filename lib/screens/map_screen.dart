@@ -57,10 +57,15 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
           final List<PolylineLayer> polylineLayers = flights.map((
             flightDetails,
           ) {
-            // The routePath is already stored in the flight object.
-            final List<Position> positions = flightDetails.flight.routePath
-                .map((rp) => Position(rp.longitude, rp.latitude))
-                .toList();
+            // Use routePath if available, otherwise use directRoutePath.
+            final List<Position> positions =
+                (flightDetails.flight.routePath.isNotEmpty
+                        ? flightDetails.flight.routePath
+                        : flightDetails.flight.directRoutePath)
+                    .map(
+                      (rp) => Position(rp.longitude, rp.latitude, rp.altitude),
+                    )
+                    .toList();
 
             return PolylineLayer(
               polylines: [LineString(coordinates: positions)],

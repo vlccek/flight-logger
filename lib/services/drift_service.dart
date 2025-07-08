@@ -108,10 +108,8 @@ class DriftService {
               LatLng(london.latitude, london.longitude),
             )
             .toInt(),
-        routePath: _calculatePath(
-          prague,
-          london,
-        ), // Calculate and assign the path
+        directRoutePath: _calculatePath(prague, london),
+        routePath: [], // Calculate and assign the path
       ),
       // Flight 2: London to Rome
       FlightsCompanion.insert(
@@ -125,10 +123,8 @@ class DriftService {
               LatLng(sydney.latitude, sydney.longitude),
             )
             .toInt(),
-        routePath: _calculatePath(
-          london,
-          sydney,
-        ), // Calculate and assign the path
+        directRoutePath: _calculatePath(london, sydney),
+        routePath: [], // Calculate and assign the path
       ),
       // Flight 3: Rome back to Prague
       FlightsCompanion.insert(
@@ -142,10 +138,8 @@ class DriftService {
               LatLng(prague.latitude, prague.longitude),
             )
             .toInt(),
-        routePath: _calculatePath(
-          sydney,
-          prague,
-        ), // Calculate and assign the path
+        directRoutePath: _calculatePath(sydney, prague),
+        routePath: [], // Calculate and assign the path
       ),
     ];
 
@@ -241,10 +235,10 @@ class DriftService {
       );
     });
 
-    logDebug('Processed ${airportCompanions.length} airports into the database.');
+    logDebug(
+      'Processed ${airportCompanions.length} airports into the database.',
+    );
   }
-
-  
 
   /// Parses a CSV string from Flightradar24 and imports the flights.
   /// Returns the number of flights that were successfully imported.
@@ -330,6 +324,7 @@ class DriftService {
             flightDuration: flightDuration,
             distance: distanceInMeters,
             routePath: routePathForDb,
+            directRoutePath: [],
           ),
         );
         successfullyParsedRows++;

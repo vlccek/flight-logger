@@ -117,6 +117,7 @@ class Flights extends Table {
   IntColumn get distance => integer()();
 
   TextColumn get routePath => text().map(const RoutePathConverter())();
+  TextColumn get directRoutePath => text().map(const RoutePathConverter())(); // New column for direct path
 
   TextColumn get flightNumber => text().nullable()();
   TextColumn get airplaneType => text().nullable()();
@@ -132,12 +133,15 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(connect());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5; // Increment schema version
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 5) {
+            await m.addColumn(flights, flights.directRoutePath);
+          }
           if (from < 4) {
             // No direct column addition for altitude, as it's part of RoutePoint serialization.
             // This migration step primarily acknowledges the change in RoutePoint structure.

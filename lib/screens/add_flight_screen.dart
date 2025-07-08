@@ -124,11 +124,18 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
     }
   }
 
-  List<RoutePoint> _parseKml(String kmlContent) {
+  List<RoutePoint> _parseKml(String kmlContent, Airport departureAirport, Airport arrivalAirport) {
     final document = XmlDocument.parse(kmlContent);
     final List<RoutePoint> routePoints = [];
     DateTime? startTime;
     DateTime? endTime;
+
+    // Add departure airport coordinates as the first point
+    routePoints.add(RoutePoint(
+      latitude: departureAirport.latitude,
+      longitude: departureAirport.longitude,
+      altitude: 0, // Assuming altitude is 0 at the airport
+    ));
 
     // Find all gx:Track elements
     final gxTracks = document.findAllElements('Track', namespace: 'http://www.google.com/kml/ext/2.2');
@@ -171,6 +178,13 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
         }
       }
     }
+
+    // Add arrival airport coordinates as the last point
+    routePoints.add(RoutePoint(
+      latitude: arrivalAirport.latitude,
+      longitude: arrivalAirport.longitude,
+      altitude: 0, // Assuming altitude is 0 at the airport
+    ));
 
     // Update state variables if KML provided time data
     if (startTime != null && endTime != null) {
@@ -229,7 +243,7 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
 
       if (_kmlFileResult != null && _kmlFileResult!.files.single.bytes != null) {
         final kmlContent = String.fromCharCodes(_kmlFileResult!.files.single.bytes!);
-        routePathForDb = _parseKml(kmlContent);
+        routePathForDb = _parseKml(kmlContent, departure, arrival);
       } else {
         final distanceInMeters = _geodesy.distanceBetweenTwoGeoPoints(
           LatLng(departure.latitude, departure.longitude),
@@ -258,6 +272,7 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
           LatLng(arrival.latitude, arrival.longitude),
         ).toInt()),
         routePath: Value(routePathForDb),
+        directRoutePath: Value(routePathForDb), // Added this line
         flightNumber: Value(_flightNumberController.text),
         airplaneType: Value(_airplaneTypeController.text),
         registration: Value(_registrationController.text),

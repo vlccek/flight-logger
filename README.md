@@ -1,16 +1,31 @@
-# flight_logger
+# Flight Logger
 
-A new Flutter project.
+Flight Logger is a Flutter application designed to help aviation enthusiasts and pilots track and visualize their flights. This app allows users to log flight details, manage airport information, and display flight paths on an interactive map.
 
-## Getting Started
+## Features:
 
-This project is a starting point for a Flutter application.
+*   **Flight Logging:** Record comprehensive details for each flight, including departure and arrival airports, dates, durations, and aircraft information.
+*   **Airport Management:** View and manage a database of airports, including their ICAO codes, names, cities, and geographical coordinates.
+*   **Interactive Map Display:** Visualize your flight routes on a map, with support for displaying both direct paths and detailed KML tracks.
+*   **KML Import:** Import KML files to accurately represent complex flight paths, ensuring the route starts and ends precisely at the specified airport coordinates.
+*   **Data Persistence:** All flight and airport data is stored locally using Drift (SQLite), ensuring your information is always available.
 
-A few resources to get you started if this is your first Flutter project:
+## Getting Started:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+This project is a Flutter application. To get started:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-username/flight_logger.git
+    cd flight_logger
+    ```
+2.  **Fetch dependencies:**
+    ```bash
+    flutter pub get
+    ```
+3.  **Run the application:**
+    ```bash
+    flutter run
+    ```
+
+For more detailed information on Flutter development, refer to the [official Flutter documentation](https://docs.flutter.dev/).

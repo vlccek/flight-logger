@@ -535,6 +535,15 @@ class $FlightsTable extends Flights with TableInfo<$FlightsTable, Flight> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   ).withConverter<List<RoutePoint>>($FlightsTable.$converterroutePath);
+  @override
+  late final GeneratedColumnWithTypeConverter<List<RoutePoint>, String>
+  directRoutePath = GeneratedColumn<String>(
+    'direct_route_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<List<RoutePoint>>($FlightsTable.$converterdirectRoutePath);
   static const VerificationMeta _flightNumberMeta = const VerificationMeta(
     'flightNumber',
   );
@@ -595,6 +604,7 @@ class $FlightsTable extends Flights with TableInfo<$FlightsTable, Flight> {
     flightDuration,
     distance,
     routePath,
+    directRoutePath,
     flightNumber,
     airplaneType,
     registration,
@@ -728,6 +738,12 @@ class $FlightsTable extends Flights with TableInfo<$FlightsTable, Flight> {
           data['${effectivePrefix}route_path'],
         )!,
       ),
+      directRoutePath: $FlightsTable.$converterdirectRoutePath.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}direct_route_path'],
+        )!,
+      ),
       flightNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}flight_number'],
@@ -762,6 +778,8 @@ class $FlightsTable extends Flights with TableInfo<$FlightsTable, Flight> {
       const DurationConverter();
   static TypeConverter<List<RoutePoint>, String> $converterroutePath =
       const RoutePathConverter();
+  static TypeConverter<List<RoutePoint>, String> $converterdirectRoutePath =
+      const RoutePathConverter();
   static TypeConverter<SeatType, int> $converterseatType =
       const SeatTypeConverter();
   static TypeConverter<SeatType?, int?> $converterseatTypen =
@@ -776,6 +794,7 @@ class Flight extends DataClass implements Insertable<Flight> {
   final Duration flightDuration;
   final int distance;
   final List<RoutePoint> routePath;
+  final List<RoutePoint> directRoutePath;
   final String? flightNumber;
   final String? airplaneType;
   final String? registration;
@@ -789,6 +808,7 @@ class Flight extends DataClass implements Insertable<Flight> {
     required this.flightDuration,
     required this.distance,
     required this.routePath,
+    required this.directRoutePath,
     this.flightNumber,
     this.airplaneType,
     this.registration,
@@ -811,6 +831,11 @@ class Flight extends DataClass implements Insertable<Flight> {
     {
       map['route_path'] = Variable<String>(
         $FlightsTable.$converterroutePath.toSql(routePath),
+      );
+    }
+    {
+      map['direct_route_path'] = Variable<String>(
+        $FlightsTable.$converterdirectRoutePath.toSql(directRoutePath),
       );
     }
     if (!nullToAbsent || flightNumber != null) {
@@ -842,6 +867,7 @@ class Flight extends DataClass implements Insertable<Flight> {
       flightDuration: Value(flightDuration),
       distance: Value(distance),
       routePath: Value(routePath),
+      directRoutePath: Value(directRoutePath),
       flightNumber: flightNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(flightNumber),
@@ -871,6 +897,9 @@ class Flight extends DataClass implements Insertable<Flight> {
       flightDuration: serializer.fromJson<Duration>(json['flightDuration']),
       distance: serializer.fromJson<int>(json['distance']),
       routePath: serializer.fromJson<List<RoutePoint>>(json['routePath']),
+      directRoutePath: serializer.fromJson<List<RoutePoint>>(
+        json['directRoutePath'],
+      ),
       flightNumber: serializer.fromJson<String?>(json['flightNumber']),
       airplaneType: serializer.fromJson<String?>(json['airplaneType']),
       registration: serializer.fromJson<String?>(json['registration']),
@@ -889,6 +918,7 @@ class Flight extends DataClass implements Insertable<Flight> {
       'flightDuration': serializer.toJson<Duration>(flightDuration),
       'distance': serializer.toJson<int>(distance),
       'routePath': serializer.toJson<List<RoutePoint>>(routePath),
+      'directRoutePath': serializer.toJson<List<RoutePoint>>(directRoutePath),
       'flightNumber': serializer.toJson<String?>(flightNumber),
       'airplaneType': serializer.toJson<String?>(airplaneType),
       'registration': serializer.toJson<String?>(registration),
@@ -905,6 +935,7 @@ class Flight extends DataClass implements Insertable<Flight> {
     Duration? flightDuration,
     int? distance,
     List<RoutePoint>? routePath,
+    List<RoutePoint>? directRoutePath,
     Value<String?> flightNumber = const Value.absent(),
     Value<String?> airplaneType = const Value.absent(),
     Value<String?> registration = const Value.absent(),
@@ -918,6 +949,7 @@ class Flight extends DataClass implements Insertable<Flight> {
     flightDuration: flightDuration ?? this.flightDuration,
     distance: distance ?? this.distance,
     routePath: routePath ?? this.routePath,
+    directRoutePath: directRoutePath ?? this.directRoutePath,
     flightNumber: flightNumber.present ? flightNumber.value : this.flightNumber,
     airplaneType: airplaneType.present ? airplaneType.value : this.airplaneType,
     registration: registration.present ? registration.value : this.registration,
@@ -941,6 +973,9 @@ class Flight extends DataClass implements Insertable<Flight> {
           : this.flightDuration,
       distance: data.distance.present ? data.distance.value : this.distance,
       routePath: data.routePath.present ? data.routePath.value : this.routePath,
+      directRoutePath: data.directRoutePath.present
+          ? data.directRoutePath.value
+          : this.directRoutePath,
       flightNumber: data.flightNumber.present
           ? data.flightNumber.value
           : this.flightNumber,
@@ -965,6 +1000,7 @@ class Flight extends DataClass implements Insertable<Flight> {
           ..write('flightDuration: $flightDuration, ')
           ..write('distance: $distance, ')
           ..write('routePath: $routePath, ')
+          ..write('directRoutePath: $directRoutePath, ')
           ..write('flightNumber: $flightNumber, ')
           ..write('airplaneType: $airplaneType, ')
           ..write('registration: $registration, ')
@@ -983,6 +1019,7 @@ class Flight extends DataClass implements Insertable<Flight> {
     flightDuration,
     distance,
     routePath,
+    directRoutePath,
     flightNumber,
     airplaneType,
     registration,
@@ -1000,6 +1037,7 @@ class Flight extends DataClass implements Insertable<Flight> {
           other.flightDuration == this.flightDuration &&
           other.distance == this.distance &&
           other.routePath == this.routePath &&
+          other.directRoutePath == this.directRoutePath &&
           other.flightNumber == this.flightNumber &&
           other.airplaneType == this.airplaneType &&
           other.registration == this.registration &&
@@ -1015,6 +1053,7 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
   final Value<Duration> flightDuration;
   final Value<int> distance;
   final Value<List<RoutePoint>> routePath;
+  final Value<List<RoutePoint>> directRoutePath;
   final Value<String?> flightNumber;
   final Value<String?> airplaneType;
   final Value<String?> registration;
@@ -1028,6 +1067,7 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
     this.flightDuration = const Value.absent(),
     this.distance = const Value.absent(),
     this.routePath = const Value.absent(),
+    this.directRoutePath = const Value.absent(),
     this.flightNumber = const Value.absent(),
     this.airplaneType = const Value.absent(),
     this.registration = const Value.absent(),
@@ -1042,6 +1082,7 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
     required Duration flightDuration,
     required int distance,
     required List<RoutePoint> routePath,
+    required List<RoutePoint> directRoutePath,
     this.flightNumber = const Value.absent(),
     this.airplaneType = const Value.absent(),
     this.registration = const Value.absent(),
@@ -1052,7 +1093,8 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
        flightDate = Value(flightDate),
        flightDuration = Value(flightDuration),
        distance = Value(distance),
-       routePath = Value(routePath);
+       routePath = Value(routePath),
+       directRoutePath = Value(directRoutePath);
   static Insertable<Flight> custom({
     Expression<int>? id,
     Expression<int>? departureAirportId,
@@ -1061,6 +1103,7 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
     Expression<int>? flightDuration,
     Expression<int>? distance,
     Expression<String>? routePath,
+    Expression<String>? directRoutePath,
     Expression<String>? flightNumber,
     Expression<String>? airplaneType,
     Expression<String>? registration,
@@ -1076,6 +1119,7 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
       if (flightDuration != null) 'flight_duration': flightDuration,
       if (distance != null) 'distance': distance,
       if (routePath != null) 'route_path': routePath,
+      if (directRoutePath != null) 'direct_route_path': directRoutePath,
       if (flightNumber != null) 'flight_number': flightNumber,
       if (airplaneType != null) 'airplane_type': airplaneType,
       if (registration != null) 'registration': registration,
@@ -1092,6 +1136,7 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
     Value<Duration>? flightDuration,
     Value<int>? distance,
     Value<List<RoutePoint>>? routePath,
+    Value<List<RoutePoint>>? directRoutePath,
     Value<String?>? flightNumber,
     Value<String?>? airplaneType,
     Value<String?>? registration,
@@ -1106,6 +1151,7 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
       flightDuration: flightDuration ?? this.flightDuration,
       distance: distance ?? this.distance,
       routePath: routePath ?? this.routePath,
+      directRoutePath: directRoutePath ?? this.directRoutePath,
       flightNumber: flightNumber ?? this.flightNumber,
       airplaneType: airplaneType ?? this.airplaneType,
       registration: registration ?? this.registration,
@@ -1142,6 +1188,11 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
         $FlightsTable.$converterroutePath.toSql(routePath.value),
       );
     }
+    if (directRoutePath.present) {
+      map['direct_route_path'] = Variable<String>(
+        $FlightsTable.$converterdirectRoutePath.toSql(directRoutePath.value),
+      );
+    }
     if (flightNumber.present) {
       map['flight_number'] = Variable<String>(flightNumber.value);
     }
@@ -1172,6 +1223,7 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
           ..write('flightDuration: $flightDuration, ')
           ..write('distance: $distance, ')
           ..write('routePath: $routePath, ')
+          ..write('directRoutePath: $directRoutePath, ')
           ..write('flightNumber: $flightNumber, ')
           ..write('airplaneType: $airplaneType, ')
           ..write('registration: $registration, ')
@@ -1637,6 +1689,7 @@ typedef $$FlightsTableCreateCompanionBuilder =
       required Duration flightDuration,
       required int distance,
       required List<RoutePoint> routePath,
+      required List<RoutePoint> directRoutePath,
       Value<String?> flightNumber,
       Value<String?> airplaneType,
       Value<String?> registration,
@@ -1652,6 +1705,7 @@ typedef $$FlightsTableUpdateCompanionBuilder =
       Value<Duration> flightDuration,
       Value<int> distance,
       Value<List<RoutePoint>> routePath,
+      Value<List<RoutePoint>> directRoutePath,
       Value<String?> flightNumber,
       Value<String?> airplaneType,
       Value<String?> registration,
@@ -1735,6 +1789,12 @@ class $$FlightsTableFilterComposer
   ColumnWithTypeConverterFilters<List<RoutePoint>, List<RoutePoint>, String>
   get routePath => $composableBuilder(
     column: $table.routePath,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<RoutePoint>, List<RoutePoint>, String>
+  get directRoutePath => $composableBuilder(
+    column: $table.directRoutePath,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
@@ -1845,6 +1905,11 @@ class $$FlightsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get directRoutePath => $composableBuilder(
+    column: $table.directRoutePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get flightNumber => $composableBuilder(
     column: $table.flightNumber,
     builder: (column) => ColumnOrderings(column),
@@ -1945,6 +2010,12 @@ class $$FlightsTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<List<RoutePoint>, String> get routePath =>
       $composableBuilder(column: $table.routePath, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<List<RoutePoint>, String>
+  get directRoutePath => $composableBuilder(
+    column: $table.directRoutePath,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get flightNumber => $composableBuilder(
     column: $table.flightNumber,
@@ -2052,6 +2123,7 @@ class $$FlightsTableTableManager
                 Value<Duration> flightDuration = const Value.absent(),
                 Value<int> distance = const Value.absent(),
                 Value<List<RoutePoint>> routePath = const Value.absent(),
+                Value<List<RoutePoint>> directRoutePath = const Value.absent(),
                 Value<String?> flightNumber = const Value.absent(),
                 Value<String?> airplaneType = const Value.absent(),
                 Value<String?> registration = const Value.absent(),
@@ -2065,6 +2137,7 @@ class $$FlightsTableTableManager
                 flightDuration: flightDuration,
                 distance: distance,
                 routePath: routePath,
+                directRoutePath: directRoutePath,
                 flightNumber: flightNumber,
                 airplaneType: airplaneType,
                 registration: registration,
@@ -2080,6 +2153,7 @@ class $$FlightsTableTableManager
                 required Duration flightDuration,
                 required int distance,
                 required List<RoutePoint> routePath,
+                required List<RoutePoint> directRoutePath,
                 Value<String?> flightNumber = const Value.absent(),
                 Value<String?> airplaneType = const Value.absent(),
                 Value<String?> registration = const Value.absent(),
@@ -2093,6 +2167,7 @@ class $$FlightsTableTableManager
                 flightDuration: flightDuration,
                 distance: distance,
                 routePath: routePath,
+                directRoutePath: directRoutePath,
                 flightNumber: flightNumber,
                 airplaneType: airplaneType,
                 registration: registration,
