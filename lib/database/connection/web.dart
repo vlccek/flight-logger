@@ -15,7 +15,7 @@ LazyDatabase connect() {
     );
 
     if (result.missingFeatures.isNotEmpty) {
-      print(
+      logDebug(
         'Warning: Your browser does not support all required features: '
         '${result.missingFeatures}',
       );

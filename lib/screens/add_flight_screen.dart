@@ -2,12 +2,14 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:geodesy/geodesy.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:xml/xml.dart';
 
 // --- Application-specific imports ---
 import '../database/database.dart';
-import '../services/drift_service.dart';
-import '../services/route_calculation_service.dart';
-import '../widgets/app_drawer.dart';
+import '../services/drift_service.dart'; // Import for FlightWithDetails and DriftService
+import '../services/route_calculation_service.dart'; // Import for RouteCalculationService
+import '../widgets/app_drawer.dart'; // Import for AppDrawer
 
 class AddFlightScreen extends StatefulWidget {
   const AddFlightScreen({super.key, this.flightToEdit});
@@ -37,8 +39,9 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
   DateTime? _selectedFlightDate;
   Airport? _selectedDeparture;
   Airport? _selectedArrival;
-  Duration _flightDuration = Duration.zero;
+  Duration? _flightDuration; // Made nullable
   SeatType? _selectedSeatType;
+  FilePickerResult? _kmlFileResult;
 
   FlightWithDetails? _flightToEdit;
 
@@ -100,9 +103,86 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
     if (pickedDate != null && pickedDate != _selectedFlightDate) {
       setState(() {
         _selectedFlightDate = pickedDate;
-        _dateController.text = DateFormat('yyyy-MM-dd').format(_selectedFlightDate!);
+        _dateController.text = DateFormat('yyyy-MM-dd').format(_selectedFlightDate!); // Safe due to null check above
       });
     }
+  }
+
+  Future<void> _pickKmlFile() async {
+    // Add a small delay to avoid the DOM element assertion error on web
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['kml'],
+    );
+
+    if (result != null) {
+      setState(() {
+        _kmlFileResult = result;
+      });
+    }
+  }
+
+  List<RoutePoint> _parseKml(String kmlContent) {
+    final document = XmlDocument.parse(kmlContent);
+    final List<RoutePoint> routePoints = [];
+    DateTime? startTime;
+    DateTime? endTime;
+
+    // Find all gx:Track elements
+    final gxTracks = document.findAllElements('Track', namespace: 'http://www.google.com/kml/ext/2.2');
+
+    for (var track in gxTracks) {
+      final gxCoords = track.findAllElements('coord', namespace: 'http://www.google.com/kml/ext/2.2');
+      final whenElements = track.findAllElements('when', namespace: 'http://www.google.com/kml/ext/2.2');
+
+      // Assuming gx:coord and gx:when elements are in corresponding order
+      for (int i = 0; i < gxCoords.length; i++) {
+        final coord = gxCoords.elementAt(i);
+        final parts = coord.innerText.trim().split(' ');
+
+        if (parts.length >= 3) {
+          final longitude = double.tryParse(parts[0]);
+          final latitude = double.tryParse(parts[1]);
+          final altitude = double.tryParse(parts[2]);
+
+          if (longitude != null && latitude != null && altitude != null) {
+            routePoints.add(RoutePoint(
+              latitude: latitude,
+              longitude: longitude,
+              altitude: altitude,
+            ));
+
+            // Extract and store timestamps
+            if (i < whenElements.length) {
+              final whenString = whenElements.elementAt(i).innerText.trim();
+              final timestamp = DateTime.tryParse(whenString);
+              if (timestamp != null) {
+                if (startTime == null || timestamp.isBefore(startTime)) {
+                  startTime = timestamp;
+                }
+                if (endTime == null || timestamp.isAfter(endTime)) {
+                  endTime = timestamp;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Update state variables if KML provided time data
+    if (startTime != null && endTime != null) {
+      setState(() {
+        _selectedFlightDate = startTime;
+        _dateController.text = DateFormat('yyyy-MM-dd HH:mm').format(startTime!);
+        _flightDuration = endTime?.difference(startTime);
+        _durationController.text = '${_flightDuration!.inHours.toString().padLeft(2, '0')}:${_flightDuration!.inMinutes.remainder(60).toString().padLeft(2, '0')}';
+      });
+    }
+
+    return routePoints;
   }
 
   /// Saves the final flight data to the database.
@@ -117,36 +197,71 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
       final departure = _selectedDeparture!;
       final arrival = _selectedArrival!;
 
-      final durationParts = _durationController.text.split(':').map(int.parse).toList();
-      _flightDuration = Duration(hours: durationParts[0], minutes: durationParts[1]);
+      // Ensure _selectedFlightDate is not null before using it
+      if (_selectedFlightDate == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please select a flight date.')),
+          );
+        }
+        setState(() => _isSaving = false);
+        return;
+      }
 
-      final distanceInMeters = _geodesy.distanceBetweenTwoGeoPoints(
-        LatLng(departure.latitude, departure.longitude),
-        LatLng(arrival.latitude, arrival.longitude),
-      ).toInt();
-      final pointCount = _routeCalculator.calculatePointsForRoute(distanceInMeters);
-      final routePositions = _routeCalculator.generateRoutePositions(
-        LatLng(departure.latitude, departure.longitude),
-        LatLng(arrival.latitude, arrival.longitude),
-        pointCount,
-      );
-      final routePathForDb = routePositions
-          .where((p) => p.length >= 2 && p[0] != null && p[1] != null)
-          .map((p) => RoutePoint(latitude: p[1]!.toDouble(), longitude: p[0]!.toDouble()))
-          .toList();
+      // Recalculate _flightDuration if KML was not used or if it's still null/zero
+      if (_kmlFileResult == null || _flightDuration == null || _flightDuration == Duration.zero) {
+        final durationParts = _durationController.text.split(':').map(int.parse).toList();
+        _flightDuration = Duration(hours: durationParts[0], minutes: durationParts[1]);
+      }
+
+      // Ensure _flightDuration is not null before using it
+      if (_flightDuration == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enter a flight duration.')),
+          );
+        }
+        setState(() => _isSaving = false);
+        return;
+      }
+
+      List<RoutePoint> routePathForDb;
+
+      if (_kmlFileResult != null && _kmlFileResult!.files.single.bytes != null) {
+        final kmlContent = String.fromCharCodes(_kmlFileResult!.files.single.bytes!);
+        routePathForDb = _parseKml(kmlContent);
+      } else {
+        final distanceInMeters = _geodesy.distanceBetweenTwoGeoPoints(
+          LatLng(departure.latitude, departure.longitude),
+          LatLng(arrival.latitude, arrival.longitude),
+        ).toInt();
+        final pointCount = _routeCalculator.calculatePointsForRoute(distanceInMeters);
+        final routePositions = _routeCalculator.generateRoutePositions(
+          LatLng(departure.latitude, departure.longitude),
+          LatLng(arrival.latitude, arrival.longitude),
+          pointCount,
+        );
+        routePathForDb = routePositions
+            .where((p) => p.length >= 2 && p[0] != null && p[1] != null)
+            .map((p) => RoutePoint(latitude: p[1]!.toDouble(), longitude: p[0]!.toDouble()))
+            .toList();
+      }
 
       final FlightsCompanion flightCompanion = FlightsCompanion(
         id: _flightToEdit != null ? Value(_flightToEdit!.flight.id) : const Value.absent(),
         departureAirportId: Value(departure.id),
         arrivalAirportId: Value(arrival.id),
         flightDate: Value(_selectedFlightDate!),
-        flightDuration: Value(_flightDuration),
-        distance: Value(distanceInMeters),
+        flightDuration: Value(_flightDuration!),
+        distance: Value(_geodesy.distanceBetweenTwoGeoPoints(
+          LatLng(departure.latitude, departure.longitude),
+          LatLng(arrival.latitude, arrival.longitude),
+        ).toInt()),
         routePath: Value(routePathForDb),
         flightNumber: Value(_flightNumberController.text),
         airplaneType: Value(_airplaneTypeController.text),
         registration: Value(_registrationController.text),
-        seat: Value(_seatController.text),
+        seat: Value(_selectedSeatType == null ? null : _seatController.text),
         seatType: Value(_selectedSeatType),
       );
 
@@ -181,7 +296,7 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Add Flight Manually')),
-      drawer: AppDrawer(),
+      drawer: const AppDrawer(), // Use const as AppDrawer is a StatelessWidget
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -293,7 +408,7 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
                         labelText: 'Seat Type',
                         border: OutlineInputBorder(),
                       ),
-                      items: SeatType.values.map((SeatType type) {
+                      items: SeatType.values.map<DropdownMenuItem<SeatType>>((SeatType type) {
                         return DropdownMenuItem<SeatType>(
                           value: type,
                           child: Text(type.toString().split('.').last),
@@ -307,6 +422,12 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _pickKmlFile,
+                icon: const Icon(Icons.upload_file),
+                label: Text(_kmlFileResult == null ? 'Pick KML File' : 'KML File Selected: ${_kmlFileResult!.files.single.name}'),
               ),
               const SizedBox(height: 40),
 

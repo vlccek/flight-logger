@@ -15,17 +15,23 @@ part 'database.g.dart';
 class RoutePoint {
   final double latitude;
   final double longitude;
+  final double? altitude; // New field for altitude
 
-  RoutePoint({required this.latitude, required this.longitude});
+  RoutePoint({required this.latitude, required this.longitude, this.altitude});
 
   factory RoutePoint.fromJson(Map<String, dynamic> json) {
     return RoutePoint(
       latitude: json['lat'] as double,
       longitude: json['lon'] as double,
+      altitude: json['alt'] as double?, // Deserialize altitude
     );
   }
 
-  Map<String, dynamic> toJson() => {'lat': latitude, 'lon': longitude};
+  Map<String, dynamic> toJson() => {
+        'lat': latitude,
+        'lon': longitude,
+        'alt': altitude, // Serialize altitude
+      };
 }
 
 /// A custom TypeConverter to store a List<RoutePoint> as a single JSON string.
@@ -126,12 +132,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(connect());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 4) {
+            // No direct column addition for altitude, as it's part of RoutePoint serialization.
+            // This migration step primarily acknowledges the change in RoutePoint structure.
+          }
           if (from < 3) {
             await m.addColumn(flights, flights.flightNumber);
           }
