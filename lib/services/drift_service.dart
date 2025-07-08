@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flight_logger/services/route_calculation_service.dart';
+import 'package:flight_logger/utils/logger.dart';
 import 'package:geodesy/geodesy.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
@@ -43,7 +44,7 @@ class DriftService {
   /// Seeds the database with a few sample flights for testing purposes.
   /// in the 'airports' table.
   Future<void> seedFlightsWithTestData() async {
-    print('Seeding database with sample flights and calculating routes...');
+    logDebug('Seeding database with sample flights and calculating routes...');
 
     // 1. Instantiate the services we'll need.
     final routeCalculator = RouteCalculationService();
@@ -61,7 +62,7 @@ class DriftService {
     )..where((a) => a.icaoCode.equals('YSSY'))).getSingleOrNull();
 
     if (prague == null || london == null || sydney == null) {
-      print(
+      logDebug(
         'Could not seed flights: Required airports (LKPR, EGLL, LIRF) not found.',
       );
       return;
@@ -153,7 +154,7 @@ class DriftService {
       batch.insertAll(_db.flights, flightsToSeed);
     });
 
-    print(
+    logDebug(
       'Seeding complete. ${flightsToSeed.length} sample flights with routes inserted.',
     );
   }
@@ -185,18 +186,18 @@ class DriftService {
   /// This is the main public method to call from your UI.
   Future<void> importAirportsFromUrl(String url) async {
     try {
-      print('Starting airport data download from $url...');
+      logDebug('Starting airport data download from $url...');
       // 1. Download the JSON data from the web.
       final jsonString = await _fetchJsonFromUrl(url);
 
-      print('Download complete. Starting database import...');
+      logDebug('Download complete. Starting database import...');
       // 2. Call the existing import function with the downloaded data.
       await _importAirportsFromJsonString(jsonString);
 
-      print('Airport import finished successfully.');
+      logDebug('Airport import finished successfully.');
     } catch (e) {
       // Catch any errors during download or parsing.
-      print('An error occurred during airport import: $e');
+      logDebug('An error occurred during airport import: $e');
       // You might want to re-throw the exception or handle it in the UI.
       rethrow;
     }
@@ -240,16 +241,10 @@ class DriftService {
       );
     });
 
-    print('Processed ${airportCompanions.length} airports into the database.');
+    logDebug('Processed ${airportCompanions.length} airports into the database.');
   }
 
-  /// Finds a single airport in the database by its ICAO code.
-  /// Returns null if the airport is not found.
-  Future<Airport?> _findAirportByIcao(String icaoCode) async {
-    return await (_db.select(
-      _db.airports,
-    )..where((a) => a.icaoCode.equals(icaoCode))).getSingleOrNull();
-  }
+  
 
   /// Parses a CSV string from Flightradar24 and imports the flights.
   /// Returns the number of flights that were successfully imported.
@@ -339,7 +334,7 @@ class DriftService {
         );
         successfullyParsedRows++;
       } catch (e) {
-        print('Failed to parse row $i: $e. Row data: $row');
+        logDebug('Failed to parse row $i: $e. Row data: $row');
       }
     }
 
@@ -407,5 +402,48 @@ class DriftService {
   Future<List<Airport>> getAllAirports() async {
     // Fetch all airports from the database.
     return await _db.select(_db.airports).get();
+  }
+
+  /// Finds a single airport in the database by its ICAO code.
+  /// Returns null if the airport is not found.
+  Future<Airport?> findAirportByIcao(String icaoCode) async {
+    return await (_db.select(_db.airports)
+          ..where((a) => a.icaoCode.equals(icaoCode.toUpperCase())))
+        .getSingleOrNull();
+  }
+
+  /// Finds a single airport in the database by its 3-letter IATA code.
+  /// Note: This assumes you have IATA codes in your database. If not, you'll
+  /// need to adjust your Airport table or use a different lookup method.
+  Future<Airport?> findAirportByIata(String iataCode) async {
+    // This is a placeholder. You need a way to link IATA to your airports.
+    // If your airports table has an `iataCode` column, this would be:
+    // return await (_db.select(_db.airports)..where((a) => a.iataCode.equals(iataCode))).getSingleOrNull();
+
+    // For now, let's fake it by looking at the first 3 letters of the ICAO code.
+    // THIS IS NOT RELIABLE FOR PRODUCTION.
+    return await (_db.select(_db.airports)
+          ..where((a) => a.icaoCode.like('$iataCode%')))
+        .get()
+        .then((results) => results.isNotEmpty ? results.first : null);
+  }
+
+  /// Calculates the distance between two airports using their stored coordinates.
+  Future<int> calculateDistanceBetweenAirports(
+    int departureId,
+    int arrivalId,
+  ) async {
+    final dep = await (_db.select(
+      _db.airports,
+    )..where((a) => a.id.equals(departureId))).getSingle();
+    final arr = await (_db.select(
+      _db.airports,
+    )..where((a) => a.id.equals(arrivalId))).getSingle();
+    return Geodesy()
+        .distanceBetweenTwoGeoPoints(
+          LatLng(dep.latitude, dep.longitude),
+          LatLng(arr.latitude, arr.longitude),
+        )
+        .toInt();
   }
 }

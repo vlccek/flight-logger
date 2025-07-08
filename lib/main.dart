@@ -1,5 +1,6 @@
 // lib/main.dart
 import 'package:flight_logger/screens/list_flights.dart';
+import 'package:flight_logger/utils/logger.dart';
 import 'package:flutter/material.dart';
 import './screens/add_flight_screen.dart';
 import './screens/flight_import_screen.dart';
@@ -21,7 +22,7 @@ Future<void> _runInitialSetup() async {
 
   // 2. If the database is empty, proceed with the one-time import.
   if (airportCount == 0) {
-    print('Database is empty. Starting one-time airport data import...');
+    logDebug('Database is empty. Starting one-time airport data import...');
 
     // The URL where your JSON file is hosted.
     const String airportDataUrl =
@@ -33,15 +34,15 @@ Future<void> _runInitialSetup() async {
 
       DriftService.instance.seedFlightsWithTestData();
 
-      print('One-time import completed successfully.');
+      logDebug('One-time import completed successfully.');
     } catch (e) {
       // If the import fails (e.g., no internet connection on first launch),
       // the database will remain empty, and the app will try again on the next launch.
-      print('One-time import failed: $e');
+      logDebug('One-time import failed: $e');
     }
   } else {
     // If airports already exist, do nothing.
-    print(
+    logDebug(
       'Airport data already exists in the database ($airportCount entries). Skipping setup.',
     );
   }

@@ -1,6 +1,7 @@
 // lib/database/connection/web.dart
 import 'package:drift/wasm.dart';
 import 'package:drift/drift.dart';
+import 'package:flight_logger/utils/logger.dart';
 
 // This is the modern implementation for the web using WebAssembly (WASM).
 LazyDatabase connect() {

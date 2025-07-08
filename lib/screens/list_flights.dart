@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import '../services/drift_service.dart';
 import '../widgets/app_drawer.dart'; // Your service
-// import 'add_flight_screen.dart'; // Screen to add/edit flights
-
-// A placeholder for your Add/Edit screen
+import 'add_flight_screen.dart'; // Screen to add/edit flights
 
 class FlightListScreen extends StatefulWidget {
   const FlightListScreen({super.key});
@@ -113,30 +111,28 @@ class _FlightListScreenState extends State<FlightListScreen> {
                   title: Text(
                     '${departure.city} (${departure.icaoCode}) → ${arrival.city} (${arrival.icaoCode})',
                   ),
-                  subtitle: Text(
-                    '${_dateFormatter.format(flight.flightDate)} • ${flight.flightDuration.inHours}h ${flight.flightDuration.inMinutes.remainder(60)}m',
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_dateFormatter.format(flight.flightDate)} • ${flight.flightDuration.inHours}h ${flight.flightDuration.inMinutes.remainder(60)}m • ${flight.distance} km',
+                      ),
+                      if (flight.flightNumber != null && flight.flightNumber!.isNotEmpty)
+                        Text('Flight: ${flight.flightNumber}'),
+                      if (flight.airplaneType != null && flight.airplaneType!.isNotEmpty)
+                        Text('Aircraft: ${flight.airplaneType}'),
+                      if (flight.registration != null && flight.registration!.isNotEmpty)
+                        Text('Reg: ${flight.registration}'),
+                      if (flight.seat != null && flight.seat!.isNotEmpty)
+                        Text('Seat: ${flight.seat} (${flight.seatType?.toString().split('.').last ?? 'N/A'})'),
+                    ],
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: () {
-                      // Logic for editing a flight
-                      // This would typically navigate to a pre-filled AddFlightScreen
-                      // Navigator.of(context).push(MaterialPageRoute(
-                      //   builder: (context) => AddFlightScreen(flightToEdit: item),
-                      // ));
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Edit Flight'),
-                          content: Text(
-                            'Editing for flight #${flight.id} is not yet implemented.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('OK'),
-                            ),
-                          ],
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => AddFlightScreen(flightToEdit: item),
                         ),
                       );
                     },
@@ -151,7 +147,7 @@ class _FlightListScreenState extends State<FlightListScreen> {
         onPressed: () {
           // Navigate to the screen for adding a new flight
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const FlightListScreen()),
+            MaterialPageRoute(builder: (context) => const AddFlightScreen()),
           );
         },
         tooltip: 'Add New Flight',

@@ -60,6 +60,21 @@ class DurationConverter extends TypeConverter<Duration, int> {
   int toSql(Duration value) => value.inSeconds;
 }
 
+enum SeatType { window, middle, aisle }
+
+class SeatTypeConverter extends TypeConverter<SeatType, int> {
+  const SeatTypeConverter();
+  @override
+  SeatType fromSql(int fromDb) {
+    return SeatType.values[fromDb];
+  }
+
+  @override
+  int toSql(SeatType value) {
+    return value.index;
+  }
+}
+
 // --- TABLE DEFINITIONS ---
 
 @DataClassName('Airport')
@@ -96,6 +111,12 @@ class Flights extends Table {
   IntColumn get distance => integer()();
 
   TextColumn get routePath => text().map(const RoutePathConverter())();
+
+  TextColumn get flightNumber => text().nullable()();
+  TextColumn get airplaneType => text().nullable()();
+  TextColumn get registration => text().nullable()();
+  TextColumn get seat => text().nullable()();
+  IntColumn get seatType => integer().map(const SeatTypeConverter()).nullable()();
 }
 
 // --- DATABASE CLASS ---
@@ -105,5 +126,21 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(connect());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 3) {
+            await m.addColumn(flights, flights.flightNumber);
+          }
+          if (from < 2) {
+            await m.addColumn(flights, flights.airplaneType);
+            await m.addColumn(flights, flights.registration);
+            await m.addColumn(flights, flights.seat);
+            await m.addColumn(flights, flights.seatType);
+          }
+        },
+      );
 }
