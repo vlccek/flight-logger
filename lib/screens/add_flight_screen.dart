@@ -1,16 +1,16 @@
 import 'package:drift/drift.dart' hide Column;
-import 'package:flutter/foundation.dart'; // For compute
 import 'package:flutter/material.dart';
 import 'package:geodesy/geodesy.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:xml/xml.dart'; // Added XML import
 
 // --- Application-specific imports ---
 import '../database/database.dart';
 import '../services/drift_service.dart'; // Import for FlightWithDetails and DriftService
 import '../services/route_calculation_service.dart'; // Import for RouteCalculationService
 import '../widgets/app_drawer.dart'; // Import for AppDrawer
-import '../utils/kml_parser.dart'; // Import for KML parsing in Isolate
+import '../utils/logger.dart'; // Import for logger
 
 class AddFlightScreen extends StatefulWidget {
   const AddFlightScreen({super.key, this.flightToEdit});
@@ -119,10 +119,114 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
     );
 
     if (result != null) {
+      logger.info('KML file picked: ${result.files.single.name}');
       setState(() {
         _kmlFileResult = result;
       });
+    } else {
+      logger.warning('KML file picking cancelled.');
     }
+  }
+
+  List<RoutePoint> _parseKml(String kmlContent, Airport departureAirport, Airport arrivalAirport) {
+    logger.info('Parsing KML content.');
+    final document = XmlDocument.parse(kmlContent);
+    final List<RoutePoint> routePoints = [];
+    DateTime? startTime;
+    DateTime? endTime;
+
+    // Add departure airport as the first point
+    routePoints.add(RoutePoint(
+      latitude: departureAirport.latitude,
+      longitude: departureAirport.longitude,
+      altitude: 0,
+    ));
+
+    // First, try to find gx:Track elements, common in flight data
+    final gxTracks = document.findAllElements('gx:Track');
+    if (gxTracks.isNotEmpty) {
+      logger.info('Found ${gxTracks.length} <gx:Track> element(s). Parsing coordinates...');
+      for (var track in gxTracks) {
+        final gxCoords = track.findElements('gx:coord');
+        final whenElements = track.findElements('when');
+
+        for (int i = 0; i < gxCoords.length; i++) {
+          final coord = gxCoords.elementAt(i);
+          final parts = coord.innerText.trim().split(' ');
+
+          if (parts.length >= 3) {
+            final longitude = double.tryParse(parts[0]);
+            final latitude = double.tryParse(parts[1]);
+            final altitude = double.tryParse(parts[2]);
+
+            if (longitude != null && latitude != null && altitude != null) {
+              routePoints.add(RoutePoint(latitude: latitude, longitude: longitude, altitude: altitude));
+
+              if (i < whenElements.length) {
+                final whenString = whenElements.elementAt(i).innerText.trim();
+                final timestamp = DateTime.tryParse(whenString);
+                if (timestamp != null) {
+                  if (startTime == null || timestamp.isBefore(startTime)) {
+                    startTime = timestamp;
+                  }
+                  if (endTime == null || timestamp.isAfter(endTime)) {
+                    endTime = timestamp;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } else {
+      // If no gx:Track, look for standard LineString coordinates
+      logger.info('No <gx:Track> found. Searching for <LineString><coordinates>...');
+      final coordinatesElements = document.findAllElements('coordinates');
+      if (coordinatesElements.isNotEmpty) {
+        logger.info('Found ${coordinatesElements.length} <coordinates> element(s).');
+        for (var coords in coordinatesElements) {
+          final lines = coords.innerText.trim().split(RegExp(r'\s+'));
+          for (var line in lines) {
+            final parts = line.trim().split(',');
+            if (parts.length >= 2) {
+              final longitude = double.tryParse(parts[0]);
+              final latitude = double.tryParse(parts[1]);
+              double altitude = 0;
+              if (parts.length >= 3) {
+                altitude = double.tryParse(parts[2]) ?? 0;
+              }
+              if (longitude != null && latitude != null) {
+                routePoints.add(RoutePoint(latitude: latitude, longitude: longitude, altitude: altitude));
+              }
+            }
+          }
+        }
+      } else {
+        logger.warning('KML parsing failed: No <gx:Track> or <coordinates> found.');
+      }
+    }
+
+    // Add arrival airport as the last point
+    routePoints.add(RoutePoint(
+      latitude: arrivalAirport.latitude,
+      longitude: arrivalAirport.longitude,
+      altitude: 0,
+    ));
+
+    logger.info('Parsed ${routePoints.length} total route points from KML.');
+
+    // Update state variables if KML provided time data
+    if (startTime != null && endTime != null) {
+      logger.info('Updating flight date and duration from KML data.');
+      setState(() {
+        _selectedFlightDate = startTime;
+        _dateController.text = DateFormat('yyyy-MM-dd HH:mm').format(startTime!); // Assert non-null
+        _flightDuration = endTime!.difference(startTime!); // Assert non-null
+        _durationController.text = '${_flightDuration!.inHours.toString().padLeft(2, '0')}:${_flightDuration!.inMinutes.remainder(60).toString().padLeft(2, '0')}';
+      });
+    }
+
+    return routePoints;
   }
 
   /// Saves the final flight data to the database.
@@ -166,51 +270,39 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
       }
 
       List<RoutePoint> routePathForDb;
-      DateTime? kmlStartTime;
-      DateTime? kmlEndTime;
+      List<RoutePoint> directRoutePathForDb;
+
+      // Calculate the direct route path first
+      final distanceInMeters = _geodesy.distanceBetweenTwoGeoPoints(
+        LatLng(departure.latitude, departure.longitude),
+        LatLng(arrival.latitude, arrival.longitude),
+      ).toInt();
+      final pointCount = _routeCalculator.calculatePointsForRoute(distanceInMeters);
+      final routePositions = _routeCalculator.generateRoutePositions(
+        LatLng(departure.latitude, departure.longitude),
+        LatLng(arrival.latitude, arrival.longitude),
+        pointCount,
+      );
+      directRoutePathForDb = routePositions
+          .where((p) => p.length >= 2 && p[0] != null && p[1] != null)
+          .map((p) => RoutePoint(latitude: p[1]!.toDouble(), longitude: p[0]!.toDouble()))
+          .toList();
 
       if (_kmlFileResult != null && _kmlFileResult!.files.single.bytes != null) {
+        logger.info('KML file found, parsing...');
         final kmlContent = String.fromCharCodes(_kmlFileResult!.files.single.bytes!);
-
-        // Parse KML route in an Isolate
-        routePathForDb = await compute(
-          parseKmlInIsolate,
-          KmlParseArguments(
-            kmlContent: kmlContent,
-            departureAirport: departure,
-            arrivalAirport: arrival,
-          ),
-        );
-
-        // Extract KML time data in an Isolate
-        final timeData = await compute(extractKmlTimeDataInIsolate, kmlContent);
-        kmlStartTime = timeData['startTime'];
-        kmlEndTime = timeData['endTime'];
-
-        // Update state variables if KML provided time data
-        if (kmlStartTime != null && kmlEndTime != null) {
-          _selectedFlightDate = kmlStartTime;
-          _dateController.text = DateFormat('yyyy-MM-dd HH:mm').format(kmlStartTime);
-          _flightDuration = kmlEndTime.difference(kmlStartTime);
-          _durationController.text = '${_flightDuration!.inHours.toString().padLeft(2, '0')}:${_flightDuration!.inMinutes.remainder(60).toString().padLeft(2, '0')}';
+        routePathForDb = _parseKml(kmlContent, departure, arrival);
+        // If KML parsing fails or returns an empty path, fallback to the direct route
+        if (routePathForDb.length <= 2) {
+          logger.warning('KML parsing resulted in an empty or invalid path. Falling back to direct route.');
+          routePathForDb = directRoutePathForDb;
         }
-
       } else {
-        final distanceInMeters = _geodesy.distanceBetweenTwoGeoPoints(
-          LatLng(departure.latitude, departure.longitude),
-          LatLng(arrival.latitude, arrival.longitude),
-        ).toInt();
-        final pointCount = _routeCalculator.calculatePointsForRoute(distanceInMeters);
-        final routePositions = _routeCalculator.generateRoutePositions(
-          LatLng(departure.latitude, departure.longitude),
-          LatLng(arrival.latitude, arrival.longitude),
-          pointCount,
-        );
-        routePathForDb = routePositions
-            .where((p) => p.length >= 2 && p[0] != null && p[1] != null)
-            .map((p) => RoutePoint(latitude: p[1]!.toDouble(), longitude: p[0]!.toDouble()))
-            .toList();
+        logger.info('No KML file, generating direct route.');
+        routePathForDb = directRoutePathForDb;
       }
+
+      logger.info('Saving flight with ${routePathForDb.length} points in routePath and ${directRoutePathForDb.length} points in directRoutePath.');
 
       final FlightsCompanion flightCompanion = FlightsCompanion(
         id: _flightToEdit != null ? Value(_flightToEdit!.flight.id) : const Value.absent(),
@@ -218,12 +310,9 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
         arrivalAirportId: Value(arrival.id),
         flightDate: Value(_selectedFlightDate!),
         flightDuration: Value(_flightDuration!),
-        distance: Value(_geodesy.distanceBetweenTwoGeoPoints(
-          LatLng(departure.latitude, departure.longitude),
-          LatLng(arrival.latitude, arrival.longitude),
-        ).toInt()),
+        distance: Value(distanceInMeters),
         routePath: Value(routePathForDb),
-        directRoutePath: Value(routePathForDb), // Added this line
+        directRoutePath: Value(directRoutePathForDb),
         flightNumber: Value(_flightNumberController.text),
         airplaneType: Value(_airplaneTypeController.text),
         registration: Value(_registrationController.text),
