@@ -115,7 +115,7 @@ class _FlightListScreenState extends State<FlightListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${_dateFormatter.format(flight.flightDate)} • ${flight.flightDuration.inHours}h ${flight.flightDuration.inMinutes.remainder(60)}m • ${flight.distance} km',
+                        '${_dateFormatter.format(flight.flightDate)} • ${flight.flightDuration.inHours}h ${flight.flightDuration.inMinutes.remainder(60)}m • ${(flight.distance / 1000).toStringAsFixed(1)} km',
                       ),
                       if (flight.flightNumber != null && flight.flightNumber!.isNotEmpty)
                         Text('Flight: ${flight.flightNumber}'),
@@ -127,16 +127,13 @@ class _FlightListScreenState extends State<FlightListScreen> {
                         Text('Seat: ${flight.seat} (${flight.seatType?.toString().split('.').last ?? 'N/A'})'),
                     ],
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => AddFlightScreen(flightToEdit: item),
-                        ),
-                      );
-                    },
-                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => AddFlightScreen(flightToEdit: item),
+                      ),
+                    );
+                  },
                 ),
               );
             },

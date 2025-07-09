@@ -1,15 +1,16 @@
 import 'package:drift/drift.dart' hide Column;
+import 'package:flutter/foundation.dart'; // For compute
 import 'package:flutter/material.dart';
 import 'package:geodesy/geodesy.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:xml/xml.dart';
 
 // --- Application-specific imports ---
 import '../database/database.dart';
 import '../services/drift_service.dart'; // Import for FlightWithDetails and DriftService
 import '../services/route_calculation_service.dart'; // Import for RouteCalculationService
 import '../widgets/app_drawer.dart'; // Import for AppDrawer
+import '../utils/kml_parser.dart'; // Import for KML parsing in Isolate
 
 class AddFlightScreen extends StatefulWidget {
   const AddFlightScreen({super.key, this.flightToEdit});
@@ -124,81 +125,6 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
     }
   }
 
-  List<RoutePoint> _parseKml(String kmlContent, Airport departureAirport, Airport arrivalAirport) {
-    final document = XmlDocument.parse(kmlContent);
-    final List<RoutePoint> routePoints = [];
-    DateTime? startTime;
-    DateTime? endTime;
-
-    // Add departure airport coordinates as the first point
-    routePoints.add(RoutePoint(
-      latitude: departureAirport.latitude,
-      longitude: departureAirport.longitude,
-      altitude: 0, // Assuming altitude is 0 at the airport
-    ));
-
-    // Find all gx:Track elements
-    final gxTracks = document.findAllElements('Track', namespace: 'http://www.google.com/kml/ext/2.2');
-
-    for (var track in gxTracks) {
-      final gxCoords = track.findAllElements('coord', namespace: 'http://www.google.com/kml/ext/2.2');
-      final whenElements = track.findAllElements('when', namespace: 'http://www.google.com/kml/ext/2.2');
-
-      // Assuming gx:coord and gx:when elements are in corresponding order
-      for (int i = 0; i < gxCoords.length; i++) {
-        final coord = gxCoords.elementAt(i);
-        final parts = coord.innerText.trim().split(' ');
-
-        if (parts.length >= 3) {
-          final longitude = double.tryParse(parts[0]);
-          final latitude = double.tryParse(parts[1]);
-          final altitude = double.tryParse(parts[2]);
-
-          if (longitude != null && latitude != null && altitude != null) {
-            routePoints.add(RoutePoint(
-              latitude: latitude,
-              longitude: longitude,
-              altitude: altitude,
-            ));
-
-            // Extract and store timestamps
-            if (i < whenElements.length) {
-              final whenString = whenElements.elementAt(i).innerText.trim();
-              final timestamp = DateTime.tryParse(whenString);
-              if (timestamp != null) {
-                if (startTime == null || timestamp.isBefore(startTime)) {
-                  startTime = timestamp;
-                }
-                if (endTime == null || timestamp.isAfter(endTime)) {
-                  endTime = timestamp;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Add arrival airport coordinates as the last point
-    routePoints.add(RoutePoint(
-      latitude: arrivalAirport.latitude,
-      longitude: arrivalAirport.longitude,
-      altitude: 0, // Assuming altitude is 0 at the airport
-    ));
-
-    // Update state variables if KML provided time data
-    if (startTime != null && endTime != null) {
-      setState(() {
-        _selectedFlightDate = startTime;
-        _dateController.text = DateFormat('yyyy-MM-dd HH:mm').format(startTime!);
-        _flightDuration = endTime?.difference(startTime);
-        _durationController.text = '${_flightDuration!.inHours.toString().padLeft(2, '0')}:${_flightDuration!.inMinutes.remainder(60).toString().padLeft(2, '0')}';
-      });
-    }
-
-    return routePoints;
-  }
-
   /// Saves the final flight data to the database.
   Future<void> _saveFlight() async {
     if (!_formKey.currentState!.validate()) {
@@ -240,10 +166,35 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
       }
 
       List<RoutePoint> routePathForDb;
+      DateTime? kmlStartTime;
+      DateTime? kmlEndTime;
 
       if (_kmlFileResult != null && _kmlFileResult!.files.single.bytes != null) {
         final kmlContent = String.fromCharCodes(_kmlFileResult!.files.single.bytes!);
-        routePathForDb = _parseKml(kmlContent, departure, arrival);
+
+        // Parse KML route in an Isolate
+        routePathForDb = await compute(
+          parseKmlInIsolate,
+          KmlParseArguments(
+            kmlContent: kmlContent,
+            departureAirport: departure,
+            arrivalAirport: arrival,
+          ),
+        );
+
+        // Extract KML time data in an Isolate
+        final timeData = await compute(extractKmlTimeDataInIsolate, kmlContent);
+        kmlStartTime = timeData['startTime'];
+        kmlEndTime = timeData['endTime'];
+
+        // Update state variables if KML provided time data
+        if (kmlStartTime != null && kmlEndTime != null) {
+          _selectedFlightDate = kmlStartTime;
+          _dateController.text = DateFormat('yyyy-MM-dd HH:mm').format(kmlStartTime);
+          _flightDuration = kmlEndTime.difference(kmlStartTime);
+          _durationController.text = '${_flightDuration!.inHours.toString().padLeft(2, '0')}:${_flightDuration!.inMinutes.remainder(60).toString().padLeft(2, '0')}';
+        }
+
       } else {
         final distanceInMeters = _geodesy.distanceBetweenTwoGeoPoints(
           LatLng(departure.latitude, departure.longitude),
