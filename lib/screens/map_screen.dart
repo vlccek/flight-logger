@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre/maplibre.dart';
+import 'package:flutter/foundation.dart'; // Import for defaultTargetPlatform
 import '../services/drift_service.dart'; // Import your services
+import '../utils/logger.dart';
 import '../widgets/app_drawer.dart'; // Your AppDrawer
 
 // Assuming your DriftService is a singleton accessible via DriftService.instance
@@ -57,15 +59,20 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
           final List<PolylineLayer> polylineLayers = flights.map((
             flightDetails,
           ) {
+            logger.info(
+                'Processing flight ${flightDetails.flight.id}: routePath has ${flightDetails.flight.routePath.length} points, directRoutePath has ${flightDetails.flight.directRoutePath.length} points.');
             // Use routePath if available, otherwise use directRoutePath.
-            final List<Position> positions =
-                (flightDetails.flight.routePath.isNotEmpty
-                        ? flightDetails.flight.routePath
-                        : flightDetails.flight.directRoutePath)
-                    .map(
-                      (rp) => Position(rp.longitude, rp.latitude, rp.altitude),
-                    )
-                    .toList();
+            final bool useKmlPath = flightDetails.flight.routePath.length > 2;
+            logger.info('Using KML path: $useKmlPath');
+            final List<Position> positions = (useKmlPath
+                    ? flightDetails.flight.routePath
+                    : flightDetails.flight.directRoutePath)
+                .map(
+                  (rp) => Position(rp.longitude, rp.latitude),
+                )
+                .toList();
+
+            logger.info('Created a polyline with ${positions.length} points.');
 
             return PolylineLayer(
               polylines: [LineString(coordinates: positions)],
@@ -100,6 +107,22 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
             }
           }
 
+          // --- Hardcoded Test Polyline ---
+          // This is to test if the Android map component can render a curved line at all.
+          final PolylineLayer testPolylineLayer = PolylineLayer(
+            polylines: [
+              LineString(
+                coordinates: [
+                  Position(0, 40),  // Start
+                  Position(10, 45), // Curve point
+                  Position(20, 40), // End
+                ],
+              ),
+            ],
+            color: Colors.blue, // A distinct color
+            width: 5,           // Thicker for visibility
+          );
+
           return MapLibreMap(
             options: MapOptions(
               initZoom: 2,
@@ -113,7 +136,7 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
                 case MapEventStyleLoaded():
                   if (!_pinImageLoaded) {
                     final ByteData byteData = await rootBundle.load(
-                      'images/pin.png',
+                      'assets/images/pin.png', // Use full path here
                     );
                     final Uint8List bytes = byteData.buffer.asUint8List();
 
@@ -127,7 +150,10 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
               }
             },
             layers: [
-              // Add all the polyline layers
+              // Add the test polyline
+              testPolylineLayer,
+
+              // Add all the flight polyline layers
               ...polylineLayers,
 
               // Add the marker layer for airports
@@ -135,7 +161,7 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
                 points: airportPoints,
                 textAllowOverlap: true,
                 iconImage: pinImageId,
-                iconSize: 0.3,
+                iconSize: defaultTargetPlatform == TargetPlatform.android ? 0.9 : 0.3,
                 iconAllowOverlap: true,
                 iconAnchor: IconAnchor.bottom,
               ),

@@ -109,7 +109,7 @@ class DriftService {
             )
             .toInt(),
         directRoutePath: _calculatePath(prague, london),
-        routePath: [], // Calculate and assign the path
+        routePath: [], // Explicitly set to an empty list
       ),
       // Flight 2: London to Rome
       FlightsCompanion.insert(
@@ -138,7 +138,7 @@ class DriftService {
               LatLng(prague.latitude, prague.longitude),
             )
             .toInt(),
-        directRoutePath: _calculatePath(sydney, prague),
+        directRoutePath: [],
         routePath: [], // Calculate and assign the path
       ),
     ];
@@ -306,8 +306,29 @@ class DriftService {
             .toList();
 
         final dateStr = row[0] as String;
+        final flightNumber = row[1] as String?;
         final depTimeStr = row[4] as String;
         final durationStr = row[6] as String;
+        final airplaneType = row[7] as String?;
+        final registration = row[8] as String?;
+        final seat = row[9] as String?;
+        final seatTypeStr = row[10] as String?;
+
+        SeatType? seatType;
+        if (seatTypeStr != null) {
+          switch (seatTypeStr.toLowerCase()) {
+            case 'window':
+              seatType = SeatType.window;
+              break;
+            case 'middle':
+              seatType = SeatType.middle;
+              break;
+            case 'aisle':
+              seatType = SeatType.aisle;
+              break;
+          }
+        }
+
         final flightDateTime = DateTime.parse('$dateStr $depTimeStr');
         final durationParts = durationStr.split(':').map(int.parse).toList();
         final flightDuration = Duration(
@@ -325,6 +346,11 @@ class DriftService {
             distance: distanceInMeters,
             routePath: routePathForDb,
             directRoutePath: [],
+            flightNumber: Value(flightNumber),
+            airplaneType: Value(airplaneType),
+            registration: Value(registration),
+            seat: Value(seat),
+            seatType: Value(seatType),
           ),
         );
         successfullyParsedRows++;

@@ -7,7 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.flight_logger"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
+    ndkVersion = "28.1.13356709"
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

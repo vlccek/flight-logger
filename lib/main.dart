@@ -6,10 +6,12 @@ import './screens/add_flight_screen.dart';
 import './screens/flight_import_screen.dart';
 import 'screens/map_screen.dart';
 import 'services/drift_service.dart';
+import 'utils/logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  setupLogger();
   await _runInitialSetup();
 
 

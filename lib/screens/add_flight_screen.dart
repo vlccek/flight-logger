@@ -114,12 +114,13 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
     await Future.delayed(const Duration(milliseconds: 100));
 
     FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['kml'],
+      withData: true,
+      type: FileType.any,
     );
 
     if (result != null) {
       logger.info('KML file picked: ${result.files.single.name}');
+      logger.info('KML file bytes length: ${result.files.single.bytes?.length ?? 0}');
       setState(() {
         _kmlFileResult = result;
       });
@@ -129,7 +130,7 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
   }
 
   List<RoutePoint> _parseKml(String kmlContent, Airport departureAirport, Airport arrivalAirport) {
-    logger.info('Parsing KML content.');
+    logger.info('Parsing KML content. Content length: ${kmlContent.length}');
     final document = XmlDocument.parse(kmlContent);
     final List<RoutePoint> routePoints = [];
     DateTime? startTime;
@@ -150,6 +151,8 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
         final gxCoords = track.findElements('gx:coord');
         final whenElements = track.findElements('when');
 
+        logger.info('  Processing track with ${gxCoords.length} gx:coord elements and ${whenElements.length} when elements.');
+
         for (int i = 0; i < gxCoords.length; i++) {
           final coord = gxCoords.elementAt(i);
           final parts = coord.innerText.trim().split(' ');
@@ -161,6 +164,9 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
 
             if (longitude != null && latitude != null && altitude != null) {
               routePoints.add(RoutePoint(latitude: latitude, longitude: longitude, altitude: altitude));
+              if (routePoints.length % 100 == 0) {
+                logger.info('    Parsed point ${routePoints.length}: Lat: $latitude, Lon: $longitude, Alt: $altitude');
+              }
 
               if (i < whenElements.length) {
                 final whenString = whenElements.elementAt(i).innerText.trim();
@@ -175,6 +181,8 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
                 }
               }
             }
+          } else {
+            logger.warning('    Skipping gx:coord due to insufficient parts: ${coord.innerText}');
           }
         }
       }
@@ -186,6 +194,7 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
         logger.info('Found ${coordinatesElements.length} <coordinates> element(s).');
         for (var coords in coordinatesElements) {
           final lines = coords.innerText.trim().split(RegExp(r'\s+'));
+          logger.info('  Processing coordinates element with ${lines.length} lines.');
           for (var line in lines) {
             final parts = line.trim().split(',');
             if (parts.length >= 2) {
@@ -197,7 +206,12 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
               }
               if (longitude != null && latitude != null) {
                 routePoints.add(RoutePoint(latitude: latitude, longitude: longitude, altitude: altitude));
+                if (routePoints.length % 100 == 0) {
+                  logger.info('    Parsed point ${routePoints.length}: Lat: $latitude, Lon: $longitude, Alt: $altitude');
+                }
               }
+            } else {
+              logger.warning('    Skipping coordinate line due to insufficient parts: $line');
             }
           }
         }
@@ -288,6 +302,11 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
           .map((p) => RoutePoint(latitude: p[1]!.toDouble(), longitude: p[0]!.toDouble()))
           .toList();
 
+      logger.info('Inside _saveFlight: _kmlFileResult is null: ${_kmlFileResult == null}');
+      if (_kmlFileResult != null) {
+        logger.info('Inside _saveFlight: _kmlFileResult.files.single.bytes is null: ${_kmlFileResult!.files.single.bytes == null}');
+      }
+
       if (_kmlFileResult != null && _kmlFileResult!.files.single.bytes != null) {
         logger.info('KML file found, parsing...');
         final kmlContent = String.fromCharCodes(_kmlFileResult!.files.single.bytes!);
@@ -301,6 +320,8 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
         logger.info('No KML file, generating direct route.');
         routePathForDb = directRoutePathForDb;
       }
+
+      logger.info('Saving flight with ${routePathForDb.length} points in routePath and ${directRoutePathForDb.length} points in directRoutePath.');
 
       logger.info('Saving flight with ${routePathForDb.length} points in routePath and ${directRoutePathForDb.length} points in directRoutePath.');
 
