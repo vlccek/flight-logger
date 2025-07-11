@@ -107,23 +107,7 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
             }
           }
 
-          // --- Hardcoded Test Polyline ---
-          // This is to test if the Android map component can render a curved line at all.
-          final PolylineLayer testPolylineLayer = PolylineLayer(
-            polylines: [
-              LineString(
-                coordinates: [
-                  Position(0, 40),  // Start
-                  Position(10, 45), // Curve point
-                  Position(20, 40), // End
-                ],
-              ),
-            ],
-            color: Colors.blue, // A distinct color
-            width: 5,           // Thicker for visibility
-          );
-
-          return MapLibreMap(
+         return MapLibreMap(
             options: MapOptions(
               initZoom: 2,
               initCenter: Position(15.0, 49.5), // Initial center
@@ -150,9 +134,6 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
               }
             },
             layers: [
-              // Add the test polyline
-              testPolylineLayer,
-
               // Add all the flight polyline layers
               ...polylineLayers,
 
