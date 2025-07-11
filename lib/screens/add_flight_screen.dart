@@ -35,6 +35,8 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
   final _airplaneTypeController = TextEditingController();
   final _registrationController = TextEditingController();
   final _seatController = TextEditingController();
+  final _flightClassController = TextEditingController();
+  final _flightReasonController = TextEditingController();
 
   // --- State Variables ---
   DateTime? _selectedFlightDate;
@@ -77,6 +79,8 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
       _registrationController.text = flight.registration ?? '';
       _seatController.text = flight.seat ?? '';
       _selectedSeatType = flight.seatType;
+      _flightClassController.text = flight.flightClass ?? '';
+      _flightReasonController.text = flight.flightReason ?? '';
     }
   }
 
@@ -90,6 +94,8 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
     _airplaneTypeController.dispose();
     _registrationController.dispose();
     _seatController.dispose();
+    _flightClassController.dispose();
+    _flightReasonController.dispose();
     super.dispose();
   }
 
@@ -233,10 +239,13 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
     if (startTime != null && endTime != null) {
       logger.info('Updating flight date and duration from KML data.');
       setState(() {
-        _selectedFlightDate = startTime;
-        _dateController.text = DateFormat('yyyy-MM-dd HH:mm').format(startTime!); // Assert non-null
-        _flightDuration = endTime!.difference(startTime!); // Assert non-null
-        _durationController.text = '${_flightDuration!.inHours.toString().padLeft(2, '0')}:${_flightDuration!.inMinutes.remainder(60).toString().padLeft(2, '0')}';
+        final nonNullStartTime = startTime as DateTime;
+        final nonNullEndTime = endTime as DateTime;
+        _selectedFlightDate = nonNullStartTime;
+        _dateController.text = DateFormat('yyyy-MM-dd HH:mm').format(nonNullStartTime);
+        final calculatedDuration = nonNullEndTime.difference(nonNullStartTime);
+        _flightDuration = calculatedDuration;
+        _durationController.text = '${calculatedDuration.inHours.toString().padLeft(2, '0')}:${calculatedDuration.inMinutes.remainder(60).toString().padLeft(2, '0')}';
       });
     }
 
@@ -339,6 +348,8 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
         registration: Value(_registrationController.text),
         seat: Value(_selectedSeatType == null ? null : _seatController.text),
         seatType: Value(_selectedSeatType),
+        flightClass: Value(_flightClassController.text),
+        flightReason: Value(_flightReasonController.text),
       );
 
       await _dbService.saveFlight(flightCompanion);
@@ -363,7 +374,7 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
   Future<Airport?> _searchAirport(BuildContext context) async {
     final airports = await _dbService.getAllAirports();
     return showSearch<Airport?>(
-      context: context,
+      context: mounted ? context : throw Exception('Context not available'),
       delegate: AirportSearchDelegate(airports),
     );
   }
@@ -498,6 +509,22 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _flightClassController,
+                decoration: const InputDecoration(
+                  labelText: 'Flight Class',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _flightReasonController,
+                decoration: const InputDecoration(
+                  labelText: 'Flight Reason',
+                  border: OutlineInputBorder(),
+                ),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(

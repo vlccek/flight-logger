@@ -11,7 +11,6 @@ part 'database.g.dart';
 // --- HELPER CLASSES AND CONVERTERS ARE NOW DEFINED IN THIS FILE ---
 
 /// A simple Dart class (PODO) to represent a single point in a route.
-/// This is NOT a database table.
 class RoutePoint {
   final double latitude;
   final double longitude;
@@ -124,6 +123,8 @@ class Flights extends Table {
   TextColumn get registration => text().nullable()();
   TextColumn get seat => text().nullable()();
   IntColumn get seatType => integer().map(const SeatTypeConverter()).nullable()();
+  TextColumn get flightClass => text().nullable()();
+  TextColumn get flightReason => text().nullable()();
 }
 
 // --- DATABASE CLASS ---
@@ -133,12 +134,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(connect());
 
   @override
-  int get schemaVersion => 5; // Increment schema version
+  int get schemaVersion => 6; // Increment schema version
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 6) {
+            await m.addColumn(flights, flights.flightClass);
+            await m.addColumn(flights, flights.flightReason);
+          }
           if (from < 5) {
             await m.addColumn(flights, flights.directRoutePath);
           }

@@ -595,6 +595,28 @@ class $FlightsTable extends Flights with TableInfo<$FlightsTable, Flight> {
         type: DriftSqlType.int,
         requiredDuringInsert: false,
       ).withConverter<SeatType?>($FlightsTable.$converterseatTypen);
+  static const VerificationMeta _flightClassMeta = const VerificationMeta(
+    'flightClass',
+  );
+  @override
+  late final GeneratedColumn<String> flightClass = GeneratedColumn<String>(
+    'flight_class',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _flightReasonMeta = const VerificationMeta(
+    'flightReason',
+  );
+  @override
+  late final GeneratedColumn<String> flightReason = GeneratedColumn<String>(
+    'flight_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -610,6 +632,8 @@ class $FlightsTable extends Flights with TableInfo<$FlightsTable, Flight> {
     registration,
     seat,
     seatType,
+    flightClass,
+    flightReason,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -697,6 +721,24 @@ class $FlightsTable extends Flights with TableInfo<$FlightsTable, Flight> {
         seat.isAcceptableOrUnknown(data['seat']!, _seatMeta),
       );
     }
+    if (data.containsKey('flight_class')) {
+      context.handle(
+        _flightClassMeta,
+        flightClass.isAcceptableOrUnknown(
+          data['flight_class']!,
+          _flightClassMeta,
+        ),
+      );
+    }
+    if (data.containsKey('flight_reason')) {
+      context.handle(
+        _flightReasonMeta,
+        flightReason.isAcceptableOrUnknown(
+          data['flight_reason']!,
+          _flightReasonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -766,6 +808,14 @@ class $FlightsTable extends Flights with TableInfo<$FlightsTable, Flight> {
           data['${effectivePrefix}seat_type'],
         ),
       ),
+      flightClass: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}flight_class'],
+      ),
+      flightReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}flight_reason'],
+      ),
     );
   }
 
@@ -800,6 +850,8 @@ class Flight extends DataClass implements Insertable<Flight> {
   final String? registration;
   final String? seat;
   final SeatType? seatType;
+  final String? flightClass;
+  final String? flightReason;
   const Flight({
     required this.id,
     required this.departureAirportId,
@@ -814,6 +866,8 @@ class Flight extends DataClass implements Insertable<Flight> {
     this.registration,
     this.seat,
     this.seatType,
+    this.flightClass,
+    this.flightReason,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -855,6 +909,12 @@ class Flight extends DataClass implements Insertable<Flight> {
         $FlightsTable.$converterseatTypen.toSql(seatType),
       );
     }
+    if (!nullToAbsent || flightClass != null) {
+      map['flight_class'] = Variable<String>(flightClass);
+    }
+    if (!nullToAbsent || flightReason != null) {
+      map['flight_reason'] = Variable<String>(flightReason);
+    }
     return map;
   }
 
@@ -881,6 +941,12 @@ class Flight extends DataClass implements Insertable<Flight> {
       seatType: seatType == null && nullToAbsent
           ? const Value.absent()
           : Value(seatType),
+      flightClass: flightClass == null && nullToAbsent
+          ? const Value.absent()
+          : Value(flightClass),
+      flightReason: flightReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(flightReason),
     );
   }
 
@@ -905,6 +971,8 @@ class Flight extends DataClass implements Insertable<Flight> {
       registration: serializer.fromJson<String?>(json['registration']),
       seat: serializer.fromJson<String?>(json['seat']),
       seatType: serializer.fromJson<SeatType?>(json['seatType']),
+      flightClass: serializer.fromJson<String?>(json['flightClass']),
+      flightReason: serializer.fromJson<String?>(json['flightReason']),
     );
   }
   @override
@@ -924,6 +992,8 @@ class Flight extends DataClass implements Insertable<Flight> {
       'registration': serializer.toJson<String?>(registration),
       'seat': serializer.toJson<String?>(seat),
       'seatType': serializer.toJson<SeatType?>(seatType),
+      'flightClass': serializer.toJson<String?>(flightClass),
+      'flightReason': serializer.toJson<String?>(flightReason),
     };
   }
 
@@ -941,6 +1011,8 @@ class Flight extends DataClass implements Insertable<Flight> {
     Value<String?> registration = const Value.absent(),
     Value<String?> seat = const Value.absent(),
     Value<SeatType?> seatType = const Value.absent(),
+    Value<String?> flightClass = const Value.absent(),
+    Value<String?> flightReason = const Value.absent(),
   }) => Flight(
     id: id ?? this.id,
     departureAirportId: departureAirportId ?? this.departureAirportId,
@@ -955,6 +1027,8 @@ class Flight extends DataClass implements Insertable<Flight> {
     registration: registration.present ? registration.value : this.registration,
     seat: seat.present ? seat.value : this.seat,
     seatType: seatType.present ? seatType.value : this.seatType,
+    flightClass: flightClass.present ? flightClass.value : this.flightClass,
+    flightReason: flightReason.present ? flightReason.value : this.flightReason,
   );
   Flight copyWithCompanion(FlightsCompanion data) {
     return Flight(
@@ -987,6 +1061,12 @@ class Flight extends DataClass implements Insertable<Flight> {
           : this.registration,
       seat: data.seat.present ? data.seat.value : this.seat,
       seatType: data.seatType.present ? data.seatType.value : this.seatType,
+      flightClass: data.flightClass.present
+          ? data.flightClass.value
+          : this.flightClass,
+      flightReason: data.flightReason.present
+          ? data.flightReason.value
+          : this.flightReason,
     );
   }
 
@@ -1005,7 +1085,9 @@ class Flight extends DataClass implements Insertable<Flight> {
           ..write('airplaneType: $airplaneType, ')
           ..write('registration: $registration, ')
           ..write('seat: $seat, ')
-          ..write('seatType: $seatType')
+          ..write('seatType: $seatType, ')
+          ..write('flightClass: $flightClass, ')
+          ..write('flightReason: $flightReason')
           ..write(')'))
         .toString();
   }
@@ -1025,6 +1107,8 @@ class Flight extends DataClass implements Insertable<Flight> {
     registration,
     seat,
     seatType,
+    flightClass,
+    flightReason,
   );
   @override
   bool operator ==(Object other) =>
@@ -1042,7 +1126,9 @@ class Flight extends DataClass implements Insertable<Flight> {
           other.airplaneType == this.airplaneType &&
           other.registration == this.registration &&
           other.seat == this.seat &&
-          other.seatType == this.seatType);
+          other.seatType == this.seatType &&
+          other.flightClass == this.flightClass &&
+          other.flightReason == this.flightReason);
 }
 
 class FlightsCompanion extends UpdateCompanion<Flight> {
@@ -1059,6 +1145,8 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
   final Value<String?> registration;
   final Value<String?> seat;
   final Value<SeatType?> seatType;
+  final Value<String?> flightClass;
+  final Value<String?> flightReason;
   const FlightsCompanion({
     this.id = const Value.absent(),
     this.departureAirportId = const Value.absent(),
@@ -1073,6 +1161,8 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
     this.registration = const Value.absent(),
     this.seat = const Value.absent(),
     this.seatType = const Value.absent(),
+    this.flightClass = const Value.absent(),
+    this.flightReason = const Value.absent(),
   });
   FlightsCompanion.insert({
     this.id = const Value.absent(),
@@ -1088,6 +1178,8 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
     this.registration = const Value.absent(),
     this.seat = const Value.absent(),
     this.seatType = const Value.absent(),
+    this.flightClass = const Value.absent(),
+    this.flightReason = const Value.absent(),
   }) : departureAirportId = Value(departureAirportId),
        arrivalAirportId = Value(arrivalAirportId),
        flightDate = Value(flightDate),
@@ -1109,6 +1201,8 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
     Expression<String>? registration,
     Expression<String>? seat,
     Expression<int>? seatType,
+    Expression<String>? flightClass,
+    Expression<String>? flightReason,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1125,6 +1219,8 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
       if (registration != null) 'registration': registration,
       if (seat != null) 'seat': seat,
       if (seatType != null) 'seat_type': seatType,
+      if (flightClass != null) 'flight_class': flightClass,
+      if (flightReason != null) 'flight_reason': flightReason,
     });
   }
 
@@ -1142,6 +1238,8 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
     Value<String?>? registration,
     Value<String?>? seat,
     Value<SeatType?>? seatType,
+    Value<String?>? flightClass,
+    Value<String?>? flightReason,
   }) {
     return FlightsCompanion(
       id: id ?? this.id,
@@ -1157,6 +1255,8 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
       registration: registration ?? this.registration,
       seat: seat ?? this.seat,
       seatType: seatType ?? this.seatType,
+      flightClass: flightClass ?? this.flightClass,
+      flightReason: flightReason ?? this.flightReason,
     );
   }
 
@@ -1210,6 +1310,12 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
         $FlightsTable.$converterseatTypen.toSql(seatType.value),
       );
     }
+    if (flightClass.present) {
+      map['flight_class'] = Variable<String>(flightClass.value);
+    }
+    if (flightReason.present) {
+      map['flight_reason'] = Variable<String>(flightReason.value);
+    }
     return map;
   }
 
@@ -1228,7 +1334,9 @@ class FlightsCompanion extends UpdateCompanion<Flight> {
           ..write('airplaneType: $airplaneType, ')
           ..write('registration: $registration, ')
           ..write('seat: $seat, ')
-          ..write('seatType: $seatType')
+          ..write('seatType: $seatType, ')
+          ..write('flightClass: $flightClass, ')
+          ..write('flightReason: $flightReason')
           ..write(')'))
         .toString();
   }
@@ -1695,6 +1803,8 @@ typedef $$FlightsTableCreateCompanionBuilder =
       Value<String?> registration,
       Value<String?> seat,
       Value<SeatType?> seatType,
+      Value<String?> flightClass,
+      Value<String?> flightReason,
     });
 typedef $$FlightsTableUpdateCompanionBuilder =
     FlightsCompanion Function({
@@ -1711,6 +1821,8 @@ typedef $$FlightsTableUpdateCompanionBuilder =
       Value<String?> registration,
       Value<String?> seat,
       Value<SeatType?> seatType,
+      Value<String?> flightClass,
+      Value<String?> flightReason,
     });
 
 final class $$FlightsTableReferences
@@ -1824,6 +1936,16 @@ class $$FlightsTableFilterComposer
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
 
+  ColumnFilters<String> get flightClass => $composableBuilder(
+    column: $table.flightClass,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get flightReason => $composableBuilder(
+    column: $table.flightReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$AirportsTableFilterComposer get departureAirportId {
     final $$AirportsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -1935,6 +2057,16 @@ class $$FlightsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get flightClass => $composableBuilder(
+    column: $table.flightClass,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get flightReason => $composableBuilder(
+    column: $table.flightReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$AirportsTableOrderingComposer get departureAirportId {
     final $$AirportsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2038,6 +2170,16 @@ class $$FlightsTableAnnotationComposer
   GeneratedColumnWithTypeConverter<SeatType?, int> get seatType =>
       $composableBuilder(column: $table.seatType, builder: (column) => column);
 
+  GeneratedColumn<String> get flightClass => $composableBuilder(
+    column: $table.flightClass,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get flightReason => $composableBuilder(
+    column: $table.flightReason,
+    builder: (column) => column,
+  );
+
   $$AirportsTableAnnotationComposer get departureAirportId {
     final $$AirportsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -2129,6 +2271,8 @@ class $$FlightsTableTableManager
                 Value<String?> registration = const Value.absent(),
                 Value<String?> seat = const Value.absent(),
                 Value<SeatType?> seatType = const Value.absent(),
+                Value<String?> flightClass = const Value.absent(),
+                Value<String?> flightReason = const Value.absent(),
               }) => FlightsCompanion(
                 id: id,
                 departureAirportId: departureAirportId,
@@ -2143,6 +2287,8 @@ class $$FlightsTableTableManager
                 registration: registration,
                 seat: seat,
                 seatType: seatType,
+                flightClass: flightClass,
+                flightReason: flightReason,
               ),
           createCompanionCallback:
               ({
@@ -2159,6 +2305,8 @@ class $$FlightsTableTableManager
                 Value<String?> registration = const Value.absent(),
                 Value<String?> seat = const Value.absent(),
                 Value<SeatType?> seatType = const Value.absent(),
+                Value<String?> flightClass = const Value.absent(),
+                Value<String?> flightReason = const Value.absent(),
               }) => FlightsCompanion.insert(
                 id: id,
                 departureAirportId: departureAirportId,
@@ -2173,6 +2321,8 @@ class $$FlightsTableTableManager
                 registration: registration,
                 seat: seat,
                 seatType: seatType,
+                flightClass: flightClass,
+                flightReason: flightReason,
               ),
           withReferenceMapper: (p0) => p0
               .map(

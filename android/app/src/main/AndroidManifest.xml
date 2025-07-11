@@ -1,4 +1,10 @@
 <manifest xmlns:tools="http://schemas.android.com/tools" xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Always include this permission -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Include only if your app benefits from precise location access. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
     <!-- Required to read and write files from external storage -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <!-- For Android 13 (API 33) and above, you might need these for specific media types -->

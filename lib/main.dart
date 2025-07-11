@@ -1,6 +1,6 @@
 // lib/main.dart
 import 'package:flight_logger/screens/list_flights.dart';
-import 'package:flight_logger/utils/logger.dart';
+
 import 'package:flutter/material.dart';
 import './screens/add_flight_screen.dart';
 import './screens/flight_import_screen.dart';

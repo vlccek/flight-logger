@@ -70,7 +70,7 @@ class DriftService {
 
     // 3. Create a helper function to avoid repeating the calculation logic.
     // This makes the code cleaner and easier to read.
-    List<RoutePoint> _calculatePath(Airport departure, Airport arrival) {
+    List<RoutePoint> calculatePath(Airport departure, Airport arrival) {
       final startLatLng = LatLng(departure.latitude, departure.longitude);
       final endLatLng = LatLng(arrival.latitude, arrival.longitude);
       final distance = geodesy
@@ -108,7 +108,7 @@ class DriftService {
               LatLng(london.latitude, london.longitude),
             )
             .toInt(),
-        directRoutePath: _calculatePath(prague, london),
+        directRoutePath: calculatePath(prague, london),
         routePath: [], // Explicitly set to an empty list
       ),
       // Flight 2: London to Rome
@@ -123,7 +123,7 @@ class DriftService {
               LatLng(sydney.latitude, sydney.longitude),
             )
             .toInt(),
-        directRoutePath: _calculatePath(london, sydney),
+        directRoutePath: calculatePath(london, sydney),
         routePath: [], // Calculate and assign the path
       ),
       // Flight 3: Rome back to Prague
@@ -294,12 +294,10 @@ class DriftService {
           pointCount,
         );
 
-        // THE ONLY CHANGE IS HERE:
         final routePathForDb = routePositions
             .map(
               (p) => RoutePoint(
                 latitude: p[1]!.toDouble(),
-                // Use ! to assert non-null and then convert
                 longitude: p[0]!.toDouble(),
               ),
             )
@@ -309,10 +307,12 @@ class DriftService {
         final flightNumber = row[1] as String?;
         final depTimeStr = row[4] as String;
         final durationStr = row[6] as String;
-        final airplaneType = row[7] as String?;
-        final registration = row[8] as String?;
-        final seat = row[9] as String?;
-        final seatTypeStr = row[10] as String?;
+        final airplaneType = row[8] as String?;
+        final registration = row[9] as String?;
+        final seat = row[10] as String?;
+        final seatTypeStr = row[11] as String?;
+        final flightClass = row[12] as String?;
+        final flightReason = row[13] as String?;
 
         SeatType? seatType;
         if (seatTypeStr != null) {
@@ -334,7 +334,6 @@ class DriftService {
         final flightDuration = Duration(
           hours: durationParts[0],
           minutes: durationParts[1],
-          seconds: durationParts[2],
         );
 
         flightsToInsert.add(
@@ -351,6 +350,8 @@ class DriftService {
             registration: Value(registration),
             seat: Value(seat),
             seatType: Value(seatType),
+            flightClass: Value(flightClass),
+            flightReason: Value(flightReason),
           ),
         );
         successfullyParsedRows++;
