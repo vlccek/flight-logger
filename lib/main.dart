@@ -1,5 +1,6 @@
 // lib/main.dart
 import 'package:flight_logger/screens/list_flights.dart';
+import 'package:flight_logger/screens/settings_screen.dart';
 
 import 'package:flutter/material.dart';
 import './screens/add_flight_screen.dart';
@@ -63,6 +64,7 @@ class MyApp extends StatelessWidget {
         AddFlightScreen.routeName: (ctx) => AddFlightScreen(),
         FlightImportScreen.routeName: (ctx) => FlightImportScreen(),
         FlightListScreen.routeName: (ctx) => FlightListScreen(),
+        '/settings': (ctx) => const SettingsScreen(),
       },
     );
   }
