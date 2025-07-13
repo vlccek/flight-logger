@@ -23,7 +23,7 @@ class ApiService {
     };
   }
 
-  Future<LoginResponse> login(String email, String password, {bool remember = false}) async {
+  Future<LoginResponse> login(String email, String password) async {
     final baseUrl = await _getBaseUrl();
     final response = await http.post(
       Uri.parse('$baseUrl/api/v1/login'),
@@ -31,7 +31,6 @@ class ApiService {
       body: jsonEncode({
         'email': email,
         'password': password,
-        'remember': remember,
       }),
     );
 
