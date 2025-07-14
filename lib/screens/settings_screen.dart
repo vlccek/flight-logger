@@ -1,8 +1,7 @@
-import 'package:flight_logger/services/api_service.dart';
+import 'package:flight_logger/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flight_logger/services/secure_storage_service.dart';
-import 'package:flight_logger/services/api_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,8 +15,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _apiUrlController = TextEditingController();
-  final _secureStorageService = SecureStorageService();
-  String? _token;
+
+  // Use the AuthService for authentication logic
+  final AuthService _authService = AuthService();
+  final SecureStorageService _secureStorageService = SecureStorageService();
+
+  bool _isApiUrlSet = false;
+  bool _isEmailSet = false;
+  bool _isPasswordSet = false;
+  bool _isConnecting = false;
 
   @override
   void initState() {
@@ -26,32 +32,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _loadCredentials() async {
-    _emailController.text = await _secureStorageService.getEmail() ?? '';
-    _passwordController.text = await _secureStorageService.getPassword() ?? '';
-    _apiUrlController.text = await _secureStorageService.getApiUrl() ?? '';
-    _token = await _secureStorageService.getToken();
-    setState(() {});
+    final email = await _secureStorageService.getEmail();
+    final password = await _secureStorageService.getPassword();
+    final apiUrl = await _secureStorageService.getApiUrl();
+
+    setState(() {
+      _emailController.text = email ?? '';
+      _passwordController.text = password ?? '';
+      _apiUrlController.text = apiUrl ?? '';
+
+      _isEmailSet = email != null && email.isNotEmpty;
+      _isPasswordSet = password != null && password.isNotEmpty;
+      _isApiUrlSet = apiUrl != null && apiUrl.isNotEmpty;
+    });
   }
 
-  void _saveCredentials() async {
-    if (_formKey.currentState!.validate()) {
-      await _secureStorageService.saveEmail(_emailController.text);
-      await _secureStorageService.savePassword(_passwordController.text);
-      await _secureStorageService.saveApiUrl(_apiUrlController.text);
+  void _saveAndTestConnection() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      ApiService().login(_emailController.text, _passwordController.text);
+    setState(() {
+      _isConnecting = true;
+    });
 
-      // Placeholder for token generation
-      const generatedToken = 'your_generated_token_placeholder';
-      await _secureStorageService.saveToken(generatedToken);
+    // First, save the URL so the ApiService can use it.
+    await _secureStorageService.saveApiUrl(_apiUrlController.text);
+    await _secureStorageService.saveEmail(_emailController.text);
+    await _secureStorageService.savePassword(_passwordController.text);
 
-      setState(() {
-        _token = generatedToken;
-      });
+    // Now, attempt to log in using the AuthService.
+    final success = await _authService.login(
+      _emailController.text,
+      _passwordController.text,
+    );
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Credentials saved')));
+    setState(() {
+      _isConnecting = false;
+      _isApiUrlSet = _apiUrlController.text.isNotEmpty;
+      _isEmailSet = _emailController.text.isNotEmpty;
+      _isPasswordSet = _passwordController.text.isNotEmpty;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Settings Saved & Connection Successful' : 'Failed to connect. Check credentials and URL.'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
     }
   }
 
@@ -66,9 +95,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // --- Connection Status Box ---
+              Container(
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: _isApiUrlSet && _isEmailSet && _isPasswordSet
+                      ? Colors.green.shade100
+                      : Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(
+                    color: _isApiUrlSet && _isEmailSet && _isPasswordSet
+                        ? Colors.green
+                        : Colors.amber,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isApiUrlSet && _isEmailSet && _isPasswordSet
+                          ? Icons.check_circle
+                          : Icons.warning,
+                      color: _isApiUrlSet && _isEmailSet && _isPasswordSet
+                          ? Colors.green
+                          : Colors.amber.shade800,
+                    ),
+                    const SizedBox(width: 12.0),
+                    Text(
+                      _isApiUrlSet && _isEmailSet && _isPasswordSet
+                          ? 'Ready to Connect'
+                          : 'Configuration Needed',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: _isApiUrlSet && _isEmailSet && _isPasswordSet
+                            ? Colors.green.shade800
+                            : Colors.amber.shade900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // --- Form Fields ---
               TextFormField(
                 controller: _apiUrlController,
-                decoration: const InputDecoration(labelText: 'API URL'),
+                decoration: InputDecoration(
+                  labelText: 'API URL',
+                  suffixIcon: _isApiUrlSet ? const Icon(Icons.check, color: Colors.green) : null,
+                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter the API URL';
@@ -78,7 +152,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  suffixIcon: _isEmailSet ? const Icon(Icons.check, color: Colors.green) : null,
+                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your email';
@@ -88,7 +165,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  suffixIcon: _isPasswordSet ? const Icon(Icons.check, color: Colors.green) : null,
+                ),
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -99,15 +179,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _saveCredentials,
-                child: const Text('Save'),
+                onPressed: _isConnecting ? null : _saveAndTestConnection,
+                child: _isConnecting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.0),
+                      )
+                    : const Text('Save & Test Connection'),
               ),
-              const SizedBox(height: 20),
-              if (_token != null)
-                Text(
-                  'Generated Token: $_token',
-                  style: const TextStyle(fontSize: 16),
-                ),
             ],
           ),
         ),

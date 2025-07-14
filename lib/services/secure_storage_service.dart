@@ -1,8 +1,11 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorageService {
-  static final SecureStorageService _instance = SecureStorageService._internal();
+  static final SecureStorageService _instance =
+      SecureStorageService._internal();
+
   factory SecureStorageService() => _instance;
+
   SecureStorageService._internal();
 
   final _storage = const FlutterSecureStorage();
@@ -49,5 +52,17 @@ class SecureStorageService {
 
   Future<String?> getApiUrl() async {
     return await _storage.read(key: 'api_url');
+  }
+
+  Future<void> saveExpiresAt(DateTime expiresAt) async {
+    await _storage.write(key: 'expires_at', value: expiresAt.toString());
+  }
+
+  Future<String?> getExpiresAt() async {
+    return await _storage.read(key: 'expires_at');
+  }
+
+  Future<void> deleteExpiresAt() async {
+    await _storage.delete(key: 'expires_at');
   }
 }
