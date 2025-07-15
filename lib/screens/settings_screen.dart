@@ -1,4 +1,5 @@
 import 'package:flight_logger/services/auth_service.dart';
+import 'package:flight_logger/widgets/app_drawer.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flight_logger/services/secure_storage_service.dart';
@@ -77,7 +78,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? 'Settings Saved & Connection Successful' : 'Failed to connect. Check credentials and URL.'),
+          content: Text(
+            success
+                ? 'Settings Saved & Connection Successful'
+                : 'Failed to connect. Check credentials and URL.',
+          ),
           backgroundColor: success ? Colors.green : Colors.red,
         ),
       );
@@ -88,6 +93,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
+      drawer: AppDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -96,43 +102,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // --- Connection Status Box ---
-              Container(
-                padding: const EdgeInsets.all(12.0),
-                decoration: BoxDecoration(
-                  color: _isApiUrlSet && _isEmailSet && _isPasswordSet
-                      ? Colors.green.shade100
-                      : Colors.amber.shade100,
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(
-                    color: _isApiUrlSet && _isEmailSet && _isPasswordSet
-                        ? Colors.green
-                        : Colors.amber,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _isApiUrlSet && _isEmailSet && _isPasswordSet
-                          ? Icons.check_circle
-                          : Icons.warning,
-                      color: _isApiUrlSet && _isEmailSet && _isPasswordSet
-                          ? Colors.green
-                          : Colors.amber.shade800,
-                    ),
-                    const SizedBox(width: 12.0),
-                    Text(
-                      _isApiUrlSet && _isEmailSet && _isPasswordSet
-                          ? 'Ready to Connect'
-                          : 'Configuration Needed',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: _isApiUrlSet && _isEmailSet && _isPasswordSet
-                            ? Colors.green.shade800
-                            : Colors.amber.shade900,
+              ValueListenableBuilder<AuthState>(
+                valueListenable: _authService.authStateNotifier,
+                builder: (context, authState, child) {
+                  final bool isAuthenticated =
+                      authState == AuthState.authenticated;
+                  final bool isConfigured =
+                      _isApiUrlSet && _isEmailSet && _isPasswordSet;
+                  final bool isReady = isAuthenticated || isConfigured;
+
+                  return Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: isReady
+                          ? Colors.green.shade100
+                          : Colors.amber.shade100,
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: Border.all(
+                        color: isReady ? Colors.green : Colors.amber,
                       ),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isReady ? Icons.check_circle : Icons.warning,
+                          color: isReady ? Colors.green : Colors.amber.shade800,
+                        ),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: Text(
+                            isAuthenticated
+                                ? 'You are already logged in'
+                                : (isConfigured
+                                      ? 'Ready to Connect'
+                                      : 'Configuration Needed'),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isReady
+                                  ? Colors.green.shade800
+                                  : Colors.amber.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 20),
 
@@ -141,7 +156,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: _apiUrlController,
                 decoration: InputDecoration(
                   labelText: 'API URL',
-                  suffixIcon: _isApiUrlSet ? const Icon(Icons.check, color: Colors.green) : null,
+                  suffixIcon: _isApiUrlSet
+                      ? const Icon(Icons.check, color: Colors.green)
+                      : null,
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -154,7 +171,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: _emailController,
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  suffixIcon: _isEmailSet ? const Icon(Icons.check, color: Colors.green) : null,
+                  suffixIcon: _isEmailSet
+                      ? const Icon(Icons.check, color: Colors.green)
+                      : null,
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -167,7 +186,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: _passwordController,
                 decoration: InputDecoration(
                   labelText: 'Password',
-                  suffixIcon: _isPasswordSet ? const Icon(Icons.check, color: Colors.green) : null,
+                  suffixIcon: _isPasswordSet
+                      ? const Icon(Icons.check, color: Colors.green)
+                      : null,
                 ),
                 obscureText: true,
                 validator: (value) {

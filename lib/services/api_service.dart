@@ -45,7 +45,6 @@ class ApiService {
       body: jsonEncode({'email': email, 'password': password}),
     );
 
-
     if (response.statusCode == 200) {
       return LoginResponse.fromJson(jsonDecode(response.body));
     } else {
@@ -77,7 +76,11 @@ class ApiService {
   }
 
   // Airport Endpoints
-  Future<List<Airport>> getAirports({int? page, int? limit, String? sortBy}) async {
+  Future<List<Airport>> getAirports({
+    int? page,
+    int? limit,
+    String? sortBy,
+  }) async {
     final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final Map<String, String> queryParameters = {};
@@ -92,8 +95,9 @@ class ApiService {
       queryParameters['sortBy'] = sortBy;
     }
 
-    final uri = Uri.parse('$baseUrl/api/v1/airports')
-        .replace(queryParameters: queryParameters.isNotEmpty ? queryParameters : null);
+    final uri = Uri.parse('$baseUrl/api/v1/airports').replace(
+      queryParameters: queryParameters.isNotEmpty ? queryParameters : null,
+    );
 
     final response = await http.get(uri, headers: headers);
 
@@ -119,10 +123,6 @@ class ApiService {
       throw Exception('Failed to load airport');
     }
   }
-
-  
-
-  
 
   Future<Airport> createAirport(Airport airport) async {
     final baseUrl = await _getBaseUrl();
@@ -200,38 +200,6 @@ class ApiService {
     }
   }
 
-  Future<List<Flight>> searchFlights({
-    String? departureAirportId,
-    String? arrivalAirportId,
-    DateTime? date,
-  }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final Map<String, String> queryParameters = {};
-
-    if (departureAirportId != null) {
-      queryParameters['departureAirportId'] = departureAirportId;
-    }
-    if (arrivalAirportId != null) {
-      queryParameters['arrivalAirportId'] = arrivalAirportId;
-    }
-    if (date != null) {
-      queryParameters['date'] = date.toIso8601String().split('T')[0];
-    }
-
-    final uri = Uri.parse('$baseUrl/api/v1/flights/search')
-        .replace(queryParameters: queryParameters.isNotEmpty ? queryParameters : null);
-
-    final response = await http.get(uri, headers: headers);
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Flight.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to search flights');
-    }
-  }
-
   Future<Flight> getFlightById(String id) async {
     final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
@@ -247,22 +215,6 @@ class ApiService {
     }
   }
 
-  Future<List<Flight>> getFlightsByUserId(String userId) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/v1/flights/user/$userId'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Flight.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load flights for user');
-    }
-  }
-
   Future<List<Flight>> searchFlights({
     String? departureAirportId,
     String? arrivalAirportId,
@@ -282,8 +234,9 @@ class ApiService {
       queryParameters['date'] = date.toIso8601String().split('T')[0];
     }
 
-    final uri = Uri.parse('$baseUrl/api/v1/flights/search')
-        .replace(queryParameters: queryParameters.isNotEmpty ? queryParameters : null);
+    final uri = Uri.parse('$baseUrl/api/v1/flights/search').replace(
+      queryParameters: queryParameters.isNotEmpty ? queryParameters : null,
+    );
 
     final response = await http.get(uri, headers: headers);
 
