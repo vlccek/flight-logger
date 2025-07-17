@@ -311,8 +311,8 @@ class DriftService {
         final registration = row[9] as String?;
         final seat = row[10] as String?;
         final seatTypeStr = row[11] as String?;
-        final flightClass = row[12] as String?;
-        final flightReason = row[13] as String?;
+        final flightClass = row[12] as FlightClass?;
+        final flightReason = row[13] as FlightReason?;
 
         SeatType? seatType;
         if (seatTypeStr != null) {
@@ -349,10 +349,10 @@ class DriftService {
             airplaneType: Value(airplaneType),
             registration: Value(registration),
             seat: Value(seat),
-            seatType: Value(seatType),
-            flightClass: Value(flightClass),
-            flightReason: Value(flightReason),
-          ),
+        seatType: Value(seatType),
+        flightClass: Value(flightClass),
+        flightReason: Value(flightReason),
+      ),
         );
         successfullyParsedRows++;
       } catch (e) {
@@ -421,6 +421,10 @@ class DriftService {
     _db.into(_db.flights).insert(flight, mode: InsertMode.insertOrReplace);
   }
 
+  Future<List<Flight>> getAllFlights() async {
+    return await _db.select(_db.flights).get();
+  }
+
   Future<List<Airport>> getAllAirports() async {
     // Fetch all airports from the database.
     return await _db.select(_db.airports).get();
@@ -448,6 +452,10 @@ class DriftService {
           ..where((a) => a.icaoCode.like('$iataCode%')))
         .get()
         .then((results) => results.isNotEmpty ? results.first : null);
+  }
+
+  Future<Airport?> findAirportById(int id) async {
+    return await (_db.select(_db.airports)..where((a) => a.id.equals(id))).getSingleOrNull();
   }
 
   /// Calculates the distance between two airports using their stored coordinates.

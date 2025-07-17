@@ -125,10 +125,10 @@ class _FlightListScreenState extends State<FlightListScreen> {
                         Text('Reg: ${flight.registration}'),
                       if (flight.seat != null && flight.seat!.isNotEmpty)
                         Text('Seat: ${flight.seat} (${flight.seatType?.toString().split('.').last ?? 'N/A'})'),
-                      if (flight.flightClass != null && flight.flightClass!.isNotEmpty)
-                        Text('Class: ${flight.flightClass}'),
-                      if (flight.flightReason != null && flight.flightReason!.isNotEmpty)
-                        Text('Reason: ${flight.flightReason}'),
+                      if (flight.flightClass != null)
+                        Text('Class: ${flight.flightClass!.toString().split('.').last}'),
+                      if (flight.flightReason != null)
+                        Text('Reason: ${flight.flightReason!.toString().split('.').last}'),
                     ],
                   ),
                   onTap: () {

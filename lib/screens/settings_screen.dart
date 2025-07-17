@@ -1,4 +1,5 @@
 import 'package:flight_logger/services/auth_service.dart';
+import 'package:flight_logger/services/sync_service.dart';
 import 'package:flight_logger/widgets/app_drawer.dart';
 import 'package:flutter/material.dart';
 
@@ -20,11 +21,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Use the AuthService for authentication logic
   final AuthService _authService = AuthService();
   final SecureStorageService _secureStorageService = SecureStorageService();
+  final SyncService _syncService = SyncService();
 
   bool _isApiUrlSet = false;
   bool _isEmailSet = false;
   bool _isPasswordSet = false;
   bool _isConnecting = false;
+  bool _isSyncing = false;
 
   @override
   void initState() {
@@ -89,6 +92,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void _synchronize() async {
+    setState(() {
+      _isSyncing = true;
+    });
+
+    try {
+      await _syncService.synchronizeFlights();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Synchronization complete!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Synchronization failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    setState(() {
+      _isSyncing = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,8 +168,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             isAuthenticated
                                 ? 'You are already logged in'
                                 : (isConfigured
-                                      ? 'Ready to Connect'
-                                      : 'Configuration Needed'),
+                                    ? 'Ready to Connect'
+                                    : 'Configuration Needed'),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isReady
@@ -199,15 +233,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _isConnecting ? null : _saveAndTestConnection,
-                child: _isConnecting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.0),
-                      )
-                    : const Text('Save & Test Connection'),
+              Row(
+                children: [
+                  ElevatedButton(
+                    onPressed: _isConnecting ? null : _saveAndTestConnection,
+                    child: _isConnecting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2.0),
+                          )
+                        : const Text('Save & Test Connection'),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: _isSyncing ? null : _synchronize,
+                    child: _isSyncing
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2.0),
+                          )
+                        : const Text('Synchronize'),
+                  ),
+                ],
               ),
             ],
           ),

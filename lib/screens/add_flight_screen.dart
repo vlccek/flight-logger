@@ -35,8 +35,6 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
   final _airplaneTypeController = TextEditingController();
   final _registrationController = TextEditingController();
   final _seatController = TextEditingController();
-  final _flightClassController = TextEditingController();
-  final _flightReasonController = TextEditingController();
 
   // --- State Variables ---
   DateTime? _selectedFlightDate;
@@ -44,6 +42,8 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
   Airport? _selectedArrival;
   Duration? _flightDuration; // Made nullable
   SeatType? _selectedSeatType;
+  FlightClass? _selectedFlightClass;
+  FlightReason? _selectedFlightReason;
   FilePickerResult? _kmlFileResult;
 
   FlightWithDetails? _flightToEdit;
@@ -79,8 +79,8 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
       _registrationController.text = flight.registration ?? '';
       _seatController.text = flight.seat ?? '';
       _selectedSeatType = flight.seatType;
-      _flightClassController.text = flight.flightClass ?? '';
-      _flightReasonController.text = flight.flightReason ?? '';
+      _selectedFlightClass = flight.flightClass;
+      _selectedFlightReason = flight.flightReason;
     }
   }
 
@@ -94,8 +94,6 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
     _airplaneTypeController.dispose();
     _registrationController.dispose();
     _seatController.dispose();
-    _flightClassController.dispose();
-    _flightReasonController.dispose();
     super.dispose();
   }
 
@@ -346,10 +344,10 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
         flightNumber: Value(_flightNumberController.text),
         airplaneType: Value(_airplaneTypeController.text),
         registration: Value(_registrationController.text),
-        seat: Value(_selectedSeatType == null ? null : _seatController.text),
+        seat: Value(_seatController.text),
         seatType: Value(_selectedSeatType),
-        flightClass: Value(_flightClassController.text),
-        flightReason: Value(_flightReasonController.text),
+        flightClass: Value(_selectedFlightClass),
+        flightReason: Value(_selectedFlightReason),
       );
 
       await _dbService.saveFlight(flightCompanion);
@@ -511,20 +509,42 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _flightClassController,
+              DropdownButtonFormField<FlightClass>(
+                value: _selectedFlightClass,
                 decoration: const InputDecoration(
                   labelText: 'Flight Class',
                   border: OutlineInputBorder(),
                 ),
+                items: FlightClass.values.map<DropdownMenuItem<FlightClass>>((FlightClass type) {
+                  return DropdownMenuItem<FlightClass>(
+                    value: type,
+                    child: Text(type.toString().split('.').last),
+                  );
+                }).toList(),
+                onChanged: (FlightClass? newValue) {
+                  setState(() {
+                    _selectedFlightClass = newValue;
+                  });
+                },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _flightReasonController,
+              DropdownButtonFormField<FlightReason>(
+                value: _selectedFlightReason,
                 decoration: const InputDecoration(
                   labelText: 'Flight Reason',
                   border: OutlineInputBorder(),
                 ),
+                items: FlightReason.values.map<DropdownMenuItem<FlightReason>>((FlightReason type) {
+                  return DropdownMenuItem<FlightReason>(
+                    value: type,
+                    child: Text(type.toString().split('.').last),
+                  );
+                }).toList(),
+                onChanged: (FlightReason? newValue) {
+                  setState(() {
+                    _selectedFlightReason = newValue;
+                  });
+                },
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(

@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/secure_storage_service.dart'; // Re-added for API URL
 import '../models/airport.dart';
 import '../models/flight.dart';
+import '../utils/logger.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -171,16 +172,32 @@ class ApiService {
   Future<List<Flight>> getFlights() async {
     final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/v1/flights'),
-      headers: headers,
-    );
+    final uri = Uri.parse('$baseUrl/api/v1/myflights');
+    final response = await http.get(uri, headers: headers);
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Flight.fromJson(json)).toList();
+      if (response.body.isEmpty) {
+        return [];
+      }
+      final dynamic decodedData = jsonDecode(response.body);
+      if (decodedData == null) {
+        return [];
+      }
+      if (decodedData is List) {
+        return decodedData
+            .where((item) => item != null) // Filter out null items
+            .map((json) => Flight.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        // If the response is not a list, return an empty list or throw a more specific error
+        throw Exception(
+          'API response for flights was not a list: ${response.body}',
+        );
+      }
     } else {
-      throw Exception('Failed to load flights');
+      throw Exception(
+        'Failed to load flights: ${response.statusCode} ${response.body}',
+      );
     }
   }
 
@@ -188,7 +205,7 @@ class ApiService {
     final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.get(
-      Uri.parse('$baseUrl/api/v1/flights/user/$userId'),
+      Uri.parse('$baseUrl/api/v1/myflights/user/$userId'),
       headers: headers,
     );
 
@@ -204,7 +221,7 @@ class ApiService {
     final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.get(
-      Uri.parse('$baseUrl/api/v1/flights/$id'),
+      Uri.parse('$baseUrl/api/v1/myflights/$id'),
       headers: headers,
     );
 
@@ -234,7 +251,7 @@ class ApiService {
       queryParameters['date'] = date.toIso8601String().split('T')[0];
     }
 
-    final uri = Uri.parse('$baseUrl/api/v1/flights/search').replace(
+    final uri = Uri.parse('$baseUrl/api/v1/myflights/search').replace(
       queryParameters: queryParameters.isNotEmpty ? queryParameters : null,
     );
 
@@ -248,29 +265,32 @@ class ApiService {
     }
   }
 
-  Future<Flight> createFlight(Flight flight) async {
+  Future<Flight> createFlight(Map<String, dynamic> flightData) async {
     final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.post(
-      Uri.parse('$baseUrl/api/v1/flights'),
+      Uri.parse('$baseUrl/api/v1/myflights'),
       headers: headers,
-      body: jsonEncode(flight.toJson()),
+      body: jsonEncode(flightData),
     );
 
     if (response.statusCode == 200) {
       return Flight.fromJson(jsonDecode(response.body));
     } else {
+      logDebug(
+        'Failed to create flight: Status Code: ${response.statusCode}, Body: ${response.body}',
+      );
       throw Exception('Failed to create flight');
     }
   }
 
-  Future<void> updateFlight(String id, Flight flight) async {
+  Future<void> updateFlight(String id, Map<String, dynamic> flightData) async {
     final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.put(
-      Uri.parse('$baseUrl/api/v1/flights/$id'),
+      Uri.parse('$baseUrl/api/v1/myflights/$id'),
       headers: headers,
-      body: jsonEncode(flight.toJson()),
+      body: jsonEncode(flightData),
     );
 
     if (response.statusCode != 200) {
@@ -278,11 +298,26 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getLatestEditedDate() async {
+    final baseUrl = await _getBaseUrl();
+    final headers = await _getHeaders();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/v1/myflights/latestEditedDate'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to get latest edited date');
+    }
+  }
+
   Future<void> deleteFlight(String id) async {
     final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.delete(
-      Uri.parse('$baseUrl/api/v1/flights/$id'),
+      Uri.parse('$baseUrl/api/v1/myflights/$id'),
       headers: headers,
     );
 

@@ -65,7 +65,7 @@ class DurationConverter extends TypeConverter<Duration, int> {
   int toSql(Duration value) => value.inSeconds;
 }
 
-enum SeatType { window, middle, aisle }
+enum SeatType { none, window, middle, aisle }
 
 class SeatTypeConverter extends TypeConverter<SeatType, int> {
   const SeatTypeConverter();
@@ -76,6 +76,36 @@ class SeatTypeConverter extends TypeConverter<SeatType, int> {
 
   @override
   int toSql(SeatType value) {
+    return value.index;
+  }
+}
+
+enum FlightClass { none, economy, premiumEconomy, business, first }
+
+class FlightClassConverter extends TypeConverter<FlightClass, int> {
+  const FlightClassConverter();
+  @override
+  FlightClass fromSql(int fromDb) {
+    return FlightClass.values[fromDb];
+  }
+
+  @override
+  int toSql(FlightClass value) {
+    return value.index;
+  }
+}
+
+enum FlightReason { none, leisure, business, crew, repositioning, other }
+
+class FlightReasonConverter extends TypeConverter<FlightReason, int> {
+  const FlightReasonConverter();
+  @override
+  FlightReason fromSql(int fromDb) {
+    return FlightReason.values[fromDb];
+  }
+
+  @override
+  int toSql(FlightReason value) {
     return value.index;
   }
 }
@@ -123,8 +153,11 @@ class Flights extends Table {
   TextColumn get registration => text().nullable()();
   TextColumn get seat => text().nullable()();
   IntColumn get seatType => integer().map(const SeatTypeConverter()).nullable()();
-  TextColumn get flightClass => text().nullable()();
-  TextColumn get flightReason => text().nullable()();
+  IntColumn get flightClass => integer().map(const FlightClassConverter()).nullable()();
+  IntColumn get flightReason => integer().map(const FlightReasonConverter()).nullable()();
+  IntColumn get remoteID => integer().nullable()();
+  DateTimeColumn get editedAt => dateTime().nullable()();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
 }
 
 // --- DATABASE CLASS ---
@@ -134,15 +167,29 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(connect());
 
   @override
-  int get schemaVersion => 6; // Increment schema version
+  int get schemaVersion => 11; // Increment schema version
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
-          if (from < 6) {
+          if (from < 11) {
+            // The enums have been updated to include a 'none' value.
+            // No data migration is needed, as the new value will be used for new entries.
+          }
+          if (from < 9) {
+            // Drop old text columns and add new integer columns for enums
+            await m.dropColumn(flights, "flight_class");
+            await m.dropColumn(flights, "flight_reason");
             await m.addColumn(flights, flights.flightClass);
             await m.addColumn(flights, flights.flightReason);
+          }
+          if (from < 8) {
+            await m.addColumn(flights, flights.editedAt);
+          }
+          if (from < 6) {
+            // These columns were added as TextColumn in schema 6, now they are IntColumn in schema 9
+            // The drop/add in schema 9 handles the type change.
           }
           if (from < 5) {
             await m.addColumn(flights, flights.directRoutePath);
