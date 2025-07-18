@@ -348,6 +348,9 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
         seatType: Value(_selectedSeatType),
         flightClass: Value(_selectedFlightClass),
         flightReason: Value(_selectedFlightReason),
+        remoteID: _flightToEdit != null ? Value(_flightToEdit!.flight.remoteID) : const Value.absent(),
+        editedAt: Value(DateTime.now()),
+        syncedAt: _flightToEdit != null ? Value(_flightToEdit!.flight.syncedAt) : const Value.absent(),
       );
 
       await _dbService.saveFlight(flightCompanion);
