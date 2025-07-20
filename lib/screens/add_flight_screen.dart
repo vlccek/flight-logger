@@ -349,7 +349,7 @@ class _AddFlightScreenState extends State<AddFlightScreen> {
         flightClass: Value(_selectedFlightClass),
         flightReason: Value(_selectedFlightReason),
         remoteID: _flightToEdit != null ? Value(_flightToEdit!.flight.remoteID) : const Value.absent(),
-        editedAt: Value(DateTime.now()),
+        editedAt: Value(DateTime.now().toUtc()),
         syncedAt: _flightToEdit != null ? Value(_flightToEdit!.flight.syncedAt) : const Value.absent(),
       );
 

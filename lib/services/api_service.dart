@@ -284,7 +284,7 @@ class ApiService {
     }
   }
 
-  Future<void> updateFlight(String id, Map<String, dynamic> flightData) async {
+  Future<Flight> updateFlight(String id, Map<String, dynamic> flightData) async {
     final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.put(
@@ -293,7 +293,12 @@ class ApiService {
       body: jsonEncode(flightData),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode == 200) {
+      return Flight.fromJson(jsonDecode(response.body));
+    } else {
+      logDebug(
+        'Failed to update flight: Status Code: ${response.statusCode}, Body: ${response.body}',
+      );
       throw Exception('Failed to update flight');
     }
   }

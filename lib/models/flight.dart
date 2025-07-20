@@ -48,15 +48,20 @@ class Flight {
       flightReason: json['flight_reason']?.toString() ?? '',
       departureAirportId: json['departure_airport_id']?.toString() ?? '',
       arrivalAirportId: json['arrival_airport_id']?.toString() ?? '',
-      departureTime: json['departure_time'] != null ? DateTime.parse(json['departure_time']) : DateTime.now(),
-      arrivalTime: json['arrival_time'] != null ? DateTime.parse(json['arrival_time']) : DateTime.now(),
+      departureTime: json['departure_time'] != null
+          ? DateTime.parse(json['departure_time'])
+          : DateTime.now(),
+      arrivalTime: json['arrival_time'] != null
+          ? DateTime.parse(json['arrival_time'])
+          : DateTime.now(),
       distance: (json['distance'] as num?)?.toDouble() ?? 0.0,
       aircraftType: json['aircraft_type']?.toString() ?? '',
       airplaneRegistration: json['airplane_registration']?.toString(),
       seat: json['seat']?.toString(),
       seatType: json['seat_type']?.toString(),
       flightClass: json['flight_class']?.toString(),
-      editedAt: json['edited_at'] != null ? DateTime.parse(json['edited_at']) : null,
+      // add one hour for correction TODO
+      editedAt: DateTime.parse(json['edited_at']).add(const Duration(hours: 1)),
       routePath: _parseRoutePath(json['route_path']),
       directRoutePath: _parseRoutePath(json['direct_route_path']),
     );
@@ -75,7 +80,9 @@ class Flight {
       }
     }
     if (data is List) {
-      return data.map((e) => RoutePoint.fromJson(e as Map<String, dynamic>)).toList();
+      return data
+          .map((e) => RoutePoint.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     return [];
   }
@@ -98,7 +105,9 @@ class Flight {
       'flight_class': flightClass,
       'edited_at': editedAt?.toIso8601String(),
       'route_path': jsonEncode(routePath.map((e) => e.toJson()).toList()),
-      'direct_route_path': jsonEncode(directRoutePath.map((e) => e.toJson()).toList()),
+      'direct_route_path': jsonEncode(
+        directRoutePath.map((e) => e.toJson()).toList(),
+      ),
     };
   }
 }

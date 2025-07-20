@@ -418,7 +418,15 @@ class DriftService {
   }
 
   Future<void> saveFlight(FlightsCompanion flight) async {
-    _db.into(_db.flights).insert(flight, mode: InsertMode.insertOrReplace);
+    logDebug('Saving flight...');
+    if (flight.remoteID.present) {
+      logDebug('  remoteID: ${flight.remoteID.value}');
+    }
+    if (flight.editedAt.present) {
+      logDebug('  editedAt: ${flight.editedAt.value?.toIso8601String()}');
+      logDebug('  editedAt: ${flight.editedAt.value?.millisecondsSinceEpoch}');
+    }
+    await _db.into(_db.flights).insert(flight, mode: InsertMode.insertOrReplace);
   }
 
   Future<List<Flight>> getAllFlights() async {

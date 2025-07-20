@@ -59,11 +59,7 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
           final List<PolylineLayer> polylineLayers = flights.map((
             flightDetails,
           ) {
-            logger.info(
-                'Processing flight ${flightDetails.flight.id}: routePath has ${flightDetails.flight.routePath.length} points, directRoutePath has ${flightDetails.flight.directRoutePath.length} points.');
-            // Use routePath if available, otherwise use directRoutePath.
             final bool useKmlPath = flightDetails.flight.routePath.length > 2;
-            logger.info('Using KML path: $useKmlPath');
             final List<Position> positions = (useKmlPath
                     ? flightDetails.flight.routePath
                     : flightDetails.flight.directRoutePath)
@@ -72,7 +68,6 @@ class _LayersPolylinePageState extends State<LayersPolylinePage> {
                 )
                 .toList();
 
-            logger.info('Created a polyline with ${positions.length} points.');
 
             return PolylineLayer(
               polylines: [LineString(coordinates: positions)],
